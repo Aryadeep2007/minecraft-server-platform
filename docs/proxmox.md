@@ -152,3 +152,42 @@ SSH is available on port `22`.
 
 These management services should remain accessible only from the trusted LAN and should not be exposed directly to the public Internet.
 
+
+## Container Firewall
+
+The Minecraft container has the Proxmox firewall enabled.
+
+Allowed inbound traffic from the trusted LAN (`192.168.1.0/24`):
+
+- SSH: TCP `22`
+- Minecraft: TCP `25565`
+- ICMP/ping
+
+Inbound traffic not explicitly allowed is dropped.
+
+The Minecraft RCON port (`25575`) is not exposed through the firewall.
+
+## Automatic Startup
+
+Minecraft container `100` is configured to start automatically when Proxmox boots.
+
+Configuration:
+
+- `onboot: 1`
+- `startup: order=1,up=30`
+
+The Minecraft systemd service is also enabled:
+
+`minecraft.service`
+
+## Reboot Recovery Test
+
+A complete reboot test was performed successfully:
+
+1. Proxmox host rebooted.
+2. LXC container `100` started automatically.
+3. `minecraft.service` started automatically.
+4. Minecraft port `25565` became reachable.
+5. A Minecraft client successfully connected to the server.
+
+This confirms automatic recovery after a normal Proxmox reboot.
