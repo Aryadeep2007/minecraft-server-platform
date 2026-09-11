@@ -260,3 +260,41 @@ The backup system provides protection against accidental configuration changes, 
 Before major Minecraft/Paper upgrades or other potentially destructive changes, a fresh backup should be created and its integrity verified.
 
 > **Note:** The current backup storage is located on the same physical HDD as the Proxmox installation. This protects against software/configuration problems but does not protect against physical disk failure. An external or separate backup destination should be added in the future.
+
+## Network Topology and Internet Exposure
+
+The Proxmox host and Minecraft LXC are running behind the PG's shared network.
+
+- Proxmox host: `192.168.1.250/24`
+- Minecraft LXC (CT 100): `192.168.1.200/24`
+- Local gateway/router: `192.168.1.1`
+- PG upstream router: TP-Link Archer C60 V3.80 at `192.168.0.1`
+- Archer C60 WAN address: `192.168.0.152`
+- Observed public IPv4: `202.142.69.29`
+
+Network path:
+
+Internet
+  ↓
+PG upstream router `192.168.0.1`
+  ↓
+Local router `192.168.1.1`
+  ↓
+Proxmox `192.168.1.250`
+  ↓
+Minecraft CT 100 `192.168.1.200:25565`
+
+LAN Minecraft connectivity was verified successfully from the Windows PC using `Test-NetConnection 192.168.1.200 -Port 25565`.
+
+The Minecraft service listens on `*:25565` inside CT 100.
+
+CT 100 firewall policy:
+- Incoming policy: `DROP`
+- Outgoing policy: `ACCEPT`
+- LAN TCP 22 allowed
+- LAN TCP 25565 allowed
+- ICMP allowed
+
+The upstream Archer C60 is PG-owned and its administrator password is unavailable. It must not be factory-reset or modified without authorization.
+
+Direct Internet port forwarding is therefore not currently configured. Remote Minecraft access, if needed later, should use a solution that does not require modifying the shared PG router.
