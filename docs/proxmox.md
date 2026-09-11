@@ -190,4 +190,73 @@ A complete reboot test was performed successfully:
 4. Minecraft port `25565` became reachable.
 5. A Minecraft client successfully connected to the server.
 
-This confirms automatic recovery after a normal Proxmox reboot.
+
+## Backup System
+
+The Minecraft LXC (CT 100) is protected by an automated Proxmox backup system.
+
+### Manual Backup
+
+A full LXC backup was successfully created using Proxmox `vzdump`:
+
+```bash
+vzdump 100 --storage local --mode snapshot --compress zstd
+```
+
+Backup storage:
+
+```text
+/var/lib/vz/dump/
+```
+
+The verified backup created during testing was approximately 682 MB.
+
+The backup archive was integrity-tested successfully with:
+
+```bash
+zstd -t /var/lib/vz/dump/vzdump-lxc-100-2026_09_10-23_10_41.tar.zst
+```
+
+### Automatic Backup Schedule
+
+An automatic Proxmox backup job is configured for Minecraft CT 100.
+
+| Setting     | Value          |
+| ----------- | -------------- |
+| Backup type | LXC (`vzdump`) |
+| Container   | CT 100         |
+| Node        | pve            |
+| Storage     | local          |
+| Mode        | snapshot       |
+| Compression | zstd           |
+| Schedule    | 02:00 daily    |
+| Enabled     | Yes            |
+
+The configured retention policy is:
+
+| Retention    | Count |
+| ------------ | ----: |
+| Keep last    |     3 |
+| Keep daily   |     7 |
+| Keep weekly  |     4 |
+| Keep monthly |     3 |
+
+The backup job is managed by Proxmox and was verified through the Proxmox API.
+
+### Backup Retention Verification
+
+The configured retention policy was tested using a dry run:
+
+```bash
+pvesm prune-backups local --vmid 100 --type lxc --keep-last 3 --keep-daily 7 --keep-weekly 4 --keep-monthly 3 --dry-run 1
+```
+
+The existing backup was correctly marked to be kept.
+
+### Backup Strategy
+
+The backup system provides protection against accidental configuration changes, server failures, and future maintenance operations.
+
+Before major Minecraft/Paper upgrades or other potentially destructive changes, a fresh backup should be created and its integrity verified.
+
+> **Note:** The current backup storage is located on the same physical HDD as the Proxmox installation. This protects against software/configuration problems but does not protect against physical disk failure. An external or separate backup destination should be added in the future.
