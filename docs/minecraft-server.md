@@ -72,3 +72,21 @@ EssentialsX 2.22.0 is installed and operational on the Paper Minecraft 1.21.11 s
 - Dynamic MOTD placeholders verified: `{PLAYER}`, `{ONLINE}`, `{TPS}`, `{UPTIME}`
 - Temporary `test` home and `test` warp were created for testing and removed afterward.
 - EssentialsX Spawn was not installed; `/spawn` is therefore not currently provided by EssentialsX core.
+
+## Tailscale Remote Access
+
+Tailscale 1.102.4 is installed and authenticated inside Minecraft LXC CT 100.
+
+- Tailscale IPv4: `100.74.236.12`
+- Minecraft service: `25565`
+- Windows client Tailscale IPv4: `100.106.244.46`
+- Tailscale daemon: `tailscaled.service`
+- Tailscale starts automatically after CT reboot.
+- Minecraft also starts automatically after CT reboot.
+- `/dev/net/tun` was passed into the unprivileged LXC to enable normal Tailscale networking.
+- LAN and Tailscale connectivity to TCP `25565` were verified successfully.
+- Minecraft client successfully connected using `100.74.236.12:25565` before and after a CT reboot.
+- The PG-owned upstream router was not modified.
+- No public Internet port forwarding is configured.
+
+Tailscale provides the remote-access path without requiring changes to the PG router.
