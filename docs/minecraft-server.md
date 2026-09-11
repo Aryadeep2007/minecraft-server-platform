@@ -59,3 +59,16 @@ CoreProtect Community Edition 23.2 is installed on the Paper Minecraft server.
 A live test was performed by placing and breaking a dirt block. CoreProtect successfully recorded both actions and returned the player name, action, block type, and world coordinates through `/co lookup`.
 
 CoreProtect was installed manually and verified after restarting the Minecraft systemd service.
+
+## EssentialsX
+
+EssentialsX 2.22.0 is installed and operational on the Paper Minecraft 1.21.11 server.
+
+- Core plugin: `EssentialsX.jar`
+- Version: 2.22.0
+- Database/economy: EssentialsX built-in economy
+- Verified commands: `/bal`, `/sethome`, `/home`, `/setwarp`, `/warp`, `/delwarp`, `/delhome`, `/motd`
+- MOTD customization: `plugins/Essentials/motd.txt`
+- Dynamic MOTD placeholders verified: `{PLAYER}`, `{ONLINE}`, `{TPS}`, `{UPTIME}`
+- Temporary `test` home and `test` warp were created for testing and removed afterward.
+- EssentialsX Spawn was not installed; `/spawn` is therefore not currently provided by EssentialsX core.
