@@ -298,3 +298,18 @@ CT 100 firewall policy:
 The upstream Archer C60 is PG-owned and its administrator password is unavailable. It must not be factory-reset or modified without authorization.
 
 Direct Internet port forwarding is therefore not currently configured. Remote Minecraft access, if needed later, should use a solution that does not require modifying the shared PG router.
+
+## Verified Tailscale Backup Checkpoint
+
+A new verified backup was created after completing and testing Tailscale remote access.
+
+- CT: `100` (`minecraft`)
+- Backup mode: `snapshot`
+- Backup archive: `vzdump-lxc-100-2026_09_11-21_39_28.tar.zst`
+- Archive size: approximately `765 MB`
+- Backup status: successful
+- Integrity check: passed using `zstd -t`
+
+This checkpoint preserves the Minecraft server state after Tailscale was configured, authenticated, verified over TCP 25565, and tested successfully after a CT reboot.
+
+The backup is stored on the local Proxmox storage and therefore protects against configuration/software problems but not physical failure of the Proxmox HDD.
