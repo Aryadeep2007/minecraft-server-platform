@@ -42,3 +42,20 @@ Internet / LAN
       │
       ▼
  Minecraft 1.21.11
+
+## Installed Plugins
+
+### CoreProtect
+
+CoreProtect Community Edition 23.2 is installed on the Paper Minecraft server.
+
+- Purpose: server activity logging, block inspection, lookup, rollback, and restore
+- Minecraft/Paper compatibility: Minecraft 1.21.11
+- Database: SQLite
+- Status: Enabled and operational
+- Plugin command: `/co`
+- Verified commands: `/co status`, `/co inspect`, `/co lookup`
+
+A live test was performed by placing and breaking a dirt block. CoreProtect successfully recorded both actions and returned the player name, action, block type, and world coordinates through `/co lookup`.
+
+CoreProtect was installed manually and verified after restarting the Minecraft systemd service.
