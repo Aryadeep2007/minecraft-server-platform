@@ -162,9 +162,119 @@ A pre-change configuration backup was created as:
 
 ### Remote Bedrock Access
 
-Remote Java access is already available through Tailscale.
+Remote Bedrock access is provided through **playit.gg** because the PG-owned upstream router cannot be modified and direct public UDP port forwarding is not available.
 
-Remote Bedrock access is not yet configured. Bedrock requires UDP connectivity to port `19132`, and the PG-owned upstream router cannot be modified. A UDP tunnel solution such as playit.gg will therefore be evaluated separately.
+The playit agent runs inside Proxmox LXC CT 100 and forwards the public Bedrock connection to the local Geyser listener.
+
+#### playit.gg Configuration
+
+| Component         | Configuration                 |
+| ----------------- | ----------------------------- |
+| Agent             | `playit`                      |
+| Agent package     | `1.0.9-1`                     |
+| Agent service     | `playit.service`              |
+| Tunnel            | `Minecraft Bedrock`           |
+| Tunnel type       | `Minecraft Bedrock`           |
+| Network           | Free Network                  |
+| Public hostname   | `nicely-fisheries.tun.ply.gg` |
+| Public IP         | `147.185.221.214`             |
+| Public port       | UDP `18029`                   |
+| Local destination | `127.0.0.1:19132`             |
+| Proxy Protocol    | `None`                        |
+
+The public Bedrock endpoint is:
+
+```text
+nicely-fisheries.tun.ply.gg:18029
+```
+
+The public port is **18029**. No router port forwarding is required.
+
+#### Geyser Configuration for playit.gg
+
+Geyser continues to listen locally on UDP port `19132`.
+
+The relevant configuration is:
+
+```yaml
+auth-type: floodgate
+broadcast-port: 18029
+use-haproxy-protocol: false
+```
+
+Proxy Protocol is intentionally disabled in the playit.gg tunnel.
+
+Geyser's Bedrock `use-haproxy-protocol` setting must remain `false`. A previous test using Proxy Protocol together with `use-haproxy-protocol: true` caused LAN Bedrock connectivity to fail. Restoring both settings to their current configuration restored both LAN Bedrock and remote playit.gg Bedrock connectivity.
+
+#### Verified Remote Bedrock Test
+
+Remote Bedrock connectivity was successfully tested through the public playit.gg endpoint.
+
+A remote Bedrock player using the username `Mimi17803` successfully reached the Minecraft server through:
+
+```text
+nicely-fisheries.tun.ply.gg:18029
+```
+
+The player reached the Minecraft server and was rejected only because they were not present on the server whitelist.
+
+This verified the complete remote Bedrock path:
+
+```text
+Remote Bedrock Client
+        |
+        v
+playit.gg public endpoint
+nicely-fisheries.tun.ply.gg:18029
+        |
+        v
+playit tunnel
+        |
+        v
+127.0.0.1:19132
+        |
+        v
+Geyser
+        |
+        v
+Floodgate
+        |
+        v
+PaperMC
+        |
+        v
+Minecraft Server
+```
+
+The successful test confirms:
+
+* Public hostname resolution works.
+* Public UDP connectivity works.
+* The playit.gg tunnel works.
+* Traffic is forwarded to the local Geyser listener.
+* Geyser accepts the Bedrock connection.
+* Floodgate handles Bedrock authentication.
+* Minecraft receives the Bedrock login.
+* Server whitelist enforcement works.
+
+No PG-owned upstream router changes were required.
+
+#### Current Remote Endpoints
+
+Java Edition:
+
+```text
+100.74.236.12:25565
+```
+
+Bedrock Edition:
+
+```text
+nicely-fisheries.tun.ply.gg:18029
+```
+
+The public Bedrock port is **18029**, not `18829`.
+
 
 ### Crossplay Backup Checkpoint
 
