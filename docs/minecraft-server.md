@@ -283,9 +283,9 @@ After successful LAN crossplay testing, a complete CT 100 backup was created and
 Backup:
 
 ```text
-vzdump-lxc-100-2026_09_15-17_11_38.tar.zst
+vzdump-lxc-100-2026_09_16-00_09_55.tar.zst
 ```
 
 Backup mode: snapshot
-Backup size: approximately 822 MB
+Backup size: approximately 870 MB
 Integrity test: passed
