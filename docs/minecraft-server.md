@@ -99,7 +99,7 @@ Java Edition and Bedrock Edition crossplay is enabled through Geyser, Floodgate,
 
 | Component | Version / Configuration |
 |---|---|
-| Geyser-Spigot | 2.11.2 |
+| Geyser-Spigot | 2.11.3 |
 | Floodgate | 2.2.5 |
 | ViaVersion | 5.11.0 |
 | Java server port | TCP `25565` |
