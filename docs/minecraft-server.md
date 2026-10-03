@@ -92,6 +92,10 @@ Multiverse-Core 5.5.3 is installed and operational on the Paper Minecraft 1.21.1
 - `creative` was created with `/mv create creative normal`.
 - `creative` was changed to `CREATIVE` using `/mv modify creative set gamemode creative`.
 - World teleportation was verified with `/mv tp creative` and `/mv tp world`.
+- Per-world gamerule management was verified:
+  - `creative` — `minecraft:keep_inventory: true`
+  - `world` — `minecraft:keep_inventory: false`
+- The main Survival world's `keep_inventory` setting remained unchanged after modifying the Creative world.
 - Main world configuration:
   - Game mode: SURVIVAL
   - Difficulty: EASY
@@ -324,12 +328,12 @@ Integrity test: passed
 
 ### Multiverse World Management Backup Checkpoint
 
-After successful Multiverse-Core installation and in-game verification, a complete CT 100 backup was created and its Zstandard archive integrity was verified.
+After successful world-management and per-world gamerule testing, a complete CT 100 backup was created and its Zstandard archive integrity was verified.
 
 Backup:
 
 ```text
-vzdump-lxc-100-2026_10_03-20_12_56.tar.zst
+vzdump-lxc-100-2026_10_03-20_46_11.tar.zst
 ```
 Backup mode: snapshot
 Backup size: approximately 884 MB
