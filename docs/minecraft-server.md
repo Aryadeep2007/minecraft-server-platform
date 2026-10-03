@@ -73,6 +73,35 @@ EssentialsX 2.22.0 is installed and operational on the Paper Minecraft 1.21.11 s
 - Temporary `test` home and `test` warp were created for testing and removed afterward.
 - EssentialsX Spawn was not installed; `/spawn` is therefore not currently provided by EssentialsX core.
 
+## Multiverse-Core
+
+Multiverse-Core 5.5.3 is installed and operational on the Paper Minecraft 1.21.11 server.
+
+- Purpose: multi-world management
+- Plugin JAR: `Multiverse-Core.jar`
+- Version: 5.5.3
+- Paper compatibility: Paper 1.21.11
+- Verified command: `/mv version`
+- Verified command: `/mv list`
+- Verified command: `/mv info world`
+- Existing worlds recognized:
+  - `world` — NORMAL
+  - `world_nether` — NETHER
+  - `world_the_end` — THE_END
+- Main world configuration:
+  - Game mode: SURVIVAL
+  - Difficulty: EASY
+  - Environment: NORMAL
+  - World type: DEFAULT
+  - Generate structures: enabled
+  - Auto load: enabled
+  - Weather: enabled
+  - Flight: disabled
+  - Hunger depletion: enabled
+  - PvP/FVF: enabled
+- No additional worlds were created during installation/testing.
+- A saved Nether spawn location was found unsafe during startup; Multiverse automatically adjusted the Nether spawn to `world_nether:0.50,66.00,9.50`.
+
 ## Tailscale Remote Access
 
 Tailscale 1.102.4 is installed and authenticated inside Minecraft LXC CT 100.
@@ -288,4 +317,17 @@ vzdump-lxc-100-2026_09_16-00_09_55.tar.zst
 
 Backup mode: snapshot
 Backup size: approximately 870 MB
+Integrity test: passed
+
+### Multiverse Installation Backup Checkpoint
+
+After successful Multiverse-Core installation and in-game verification, a complete CT 100 backup was created and its Zstandard archive integrity was verified.
+
+Backup:
+
+```text
+vzdump-lxc-100-2026_10_03-19_34_53.tar.zst
+```
+Backup mode: snapshot
+Backup size: approximately 882 MB
 Integrity test: passed
