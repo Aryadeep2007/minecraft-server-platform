@@ -84,10 +84,14 @@ Multiverse-Core 5.5.3 is installed and operational on the Paper Minecraft 1.21.1
 - Verified command: `/mv version`
 - Verified command: `/mv list`
 - Verified command: `/mv info world`
-- Existing worlds recognized:
-  - `world` — NORMAL
+- Worlds currently managed:
+  - `world` — NORMAL — SURVIVAL
+  - `creative` — NORMAL — CREATIVE
   - `world_nether` — NETHER
   - `world_the_end` — THE_END
+- `creative` was created with `/mv create creative normal`.
+- `creative` was changed to `CREATIVE` using `/mv modify creative set gamemode creative`.
+- World teleportation was verified with `/mv tp creative` and `/mv tp world`.
 - Main world configuration:
   - Game mode: SURVIVAL
   - Difficulty: EASY
@@ -99,7 +103,6 @@ Multiverse-Core 5.5.3 is installed and operational on the Paper Minecraft 1.21.1
   - Flight: disabled
   - Hunger depletion: enabled
   - PvP/FVF: enabled
-- No additional worlds were created during installation/testing.
 - A saved Nether spawn location was found unsafe during startup; Multiverse automatically adjusted the Nether spawn to `world_nether:0.50,66.00,9.50`.
 
 ## Tailscale Remote Access
@@ -319,15 +322,15 @@ Backup mode: snapshot
 Backup size: approximately 870 MB
 Integrity test: passed
 
-### Multiverse Installation Backup Checkpoint
+### Multiverse World Management Backup Checkpoint
 
 After successful Multiverse-Core installation and in-game verification, a complete CT 100 backup was created and its Zstandard archive integrity was verified.
 
 Backup:
 
 ```text
-vzdump-lxc-100-2026_10_03-19_34_53.tar.zst
+vzdump-lxc-100-2026_10_03-20_12_56.tar.zst
 ```
 Backup mode: snapshot
-Backup size: approximately 882 MB
+Backup size: approximately 884 MB
 Integrity test: passed
