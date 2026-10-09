@@ -1,0 +1,4 @@
+/target/
+*.bak
+/Multiverse-Core.jar
+/plugin.yml
