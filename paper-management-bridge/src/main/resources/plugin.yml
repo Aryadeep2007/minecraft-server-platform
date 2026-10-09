@@ -1,0 +1,6 @@
+name: PaperManagementBridge
+version: 0.1.0-SNAPSHOT
+main: io.github.aryadeep2007.managementbridge.PaperManagementBridge
+api-version: '1.21.11'
+softdepend: [Multiverse-Core]
+description: Local-only bridge for the Minecraft management API.
