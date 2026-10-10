@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#10151f">
+    <meta name="description" content="Private Minecraft server management dashboard">
+    <title>Minecraft Control Center</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./app.js" defer></script>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <a class="brand" href="./" aria-label="Minecraft Control Center home">
+                <span class="brand-mark">M</span>
+                <span>
+                    <strong>Blockpanel</strong>
+                    <small>SERVER CONTROL</small>
+                </span>
+            </a>
+
+            <div class="nav-label">WORKSPACE</div>
+            <nav class="navigation" aria-label="Main navigation">
+                <a class="nav-item active" href="#overview">
+                    <span aria-hidden="true">&#9635;</span> Overview
+                </a>
+                <a class="nav-item" href="#players">
+                    <span aria-hidden="true">&#9823;</span> Players
+                </a>
+                <a class="nav-item" href="#worlds">
+                    <span aria-hidden="true">&#9638;</span> Worlds
+                </a>
+                <a class="nav-item" href="#gamerules">
+                    <span aria-hidden="true">&#9881;</span> Gamerules
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <span class="status-dot" id="sidebar-status-dot"></span>
+                <div>
+                    <strong id="sidebar-status">Checking server</strong>
+                    <small>Private management</small>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content" id="overview">
+            <header class="topbar">
+                <div class="breadcrumb">Workspace <span>/</span> Overview</div>
+                <div class="topbar-actions">
+                    <span class="connection-badge" id="api-status">
+                        <span class="status-dot"></span> Connecting
+                    </span>
+                    <button class="button button-secondary" id="refresh-button" type="button">
+                        <span aria-hidden="true">&#8635;</span> Refresh
+                    </button>
+                </div>
+            </header>
+
+            <section class="page-heading">
+                <div>
+                    <p class="eyebrow">MINECRAFT SERVER PLATFORM</p>
+                    <h1>Control Center</h1>
+                    <p class="subtitle">Your server at a glance.</p>
+                </div>
+                <div class="updated-label">
+                    <span class="status-dot"></span>
+                    <span id="last-updated">Waiting for first refresh</span>
+                </div>
+            </section>
+
+            <section class="metrics-grid" aria-label="Server summary">
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span class="metric-label">SERVER STATUS</span>
+                        <span class="metric-icon icon-green" aria-hidden="true">&#9679;</span>
+                    </div>
+                    <div class="metric-value" id="server-state">Loading...</div>
+                    <div class="metric-note" id="server-state-note">Checking Minecraft service</div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span class="metric-label">MINECRAFT VERSION</span>
+                        <span class="metric-icon icon-blue" aria-hidden="true">V</span>
+                    </div>
+                    <div class="metric-value" id="server-version">--</div>
+                    <div class="metric-note" id="server-protocol">Version information</div>
+                </article>
+
+                <article class="metric-card" id="players">
+                    <div class="metric-top">
+                        <span class="metric-label">ONLINE PLAYERS</span>
+                        <span class="metric-icon icon-purple" aria-hidden="true">&#9823;</span>
+                    </div>
+                    <div class="metric-value" id="online-count">--</div>
+                    <div class="metric-note">Currently connected players</div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span class="metric-label">WORLDS</span>
+                        <span class="metric-icon icon-orange" aria-hidden="true">&#9638;</span>
+                    </div>
+                    <div class="metric-value" id="world-count">--</div>
+                    <div class="metric-note">Worlds reported by the bridge</div>
+                </article>
+            </section>
+
+            <section class="content-grid">
+                <article class="panel worlds-panel" id="worlds">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>World overview</h2>
+                            <p>Worlds currently known to the management API</p>
+                        </div>
+                        <span class="panel-tag" id="worlds-tag">Loading</span>
+                    </div>
+                    <div class="world-list" id="worlds-list" aria-live="polite">
+                        <div class="loading-state">Loading world information...</div>
+                    </div>
+                </article>
+
+                <article class="panel health-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>System health</h2>
+                            <p>Management services</p>
+                        </div>
+                    </div>
+                    <div class="health-list">
+                        <div class="health-row">
+                            <span class="health-symbol" aria-hidden="true">&#9679;</span>
+                            <div class="health-copy">
+                                <strong>Management API</strong>
+                                <small>FastAPI service</small>
+                            </div>
+                            <span class="health-state checking" id="api-health">Checking</span>
+                        </div>
+                        <div class="health-row">
+                            <span class="health-symbol" aria-hidden="true">&#9679;</span>
+                            <div class="health-copy">
+                                <strong>Paper bridge</strong>
+                                <small>World management link</small>
+                            </div>
+                            <span class="health-state checking" id="bridge-health">Checking</span>
+                        </div>
+                    </div>
+                    <div class="notice">
+                        <strong>Read-only preview</strong>
+                        <p>This first dashboard screen displays status and world information. Administrative actions are not enabled here.</p>
+                    </div>
+                </article>
+            </section>
+
+            <section class="panel gamerules-panel" id="gamerules">
+                <div class="panel-heading">
+                    <div>
+                        <h2>World gamerules</h2>
+                        <p>Inspect and edit settings for an individual world.</p>
+                    </div>
+                    <span class="panel-tag" id="gamerules-tag">Not loaded</span>
+                </div>
+
+                <div class="gamerules-toolbar">
+                    <div class="gamerule-world-field">
+                        <label for="gamerule-world">World</label>
+                        <select id="gamerule-world" name="world">
+                            <option value="">Loading worlds...</option>
+                        </select>
+                    </div>
+                    <button class="button button-secondary" id="load-gamerules-button" type="button">
+                        Load gamerules
+                    </button>
+                </div>
+
+                <div class="gamerules-message" id="gamerules-message" role="status" aria-live="polite">
+                    Select a world to inspect its gamerules.
+                </div>
+
+                <div class="gamerules-list" id="gamerules-list" aria-live="polite">
+                    <div class="loading-state">Gamerules have not been loaded.</div>
+                </div>
+            </section>
+            <footer class="page-footer">
+                <span>Blockpanel <span id="dashboard-year"></span></span>
+                <span>Private Minecraft management</span>
+            </footer>
+        </main>
+    </div>
+</body>
+</html>
