@@ -1222,3 +1222,67 @@ h1 {
         padding: 14px;
     }
 }
+
+/* Whitelist controls */
+.whitelist-form {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 16px;
+}
+
+.whitelist-form > label {
+    color: #aab7c9;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.whitelist-form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.whitelist-form-row input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    min-height: 39px;
+    padding: 0 12px;
+    border: 1px solid #354359;
+    border-radius: 9px;
+    background: #101823;
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+}
+
+.whitelist-form-row input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.whitelist-form-help {
+    margin: 0;
+    color: #aab7c9;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+    .whitelist-form-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .whitelist-form-row .button {
+        width: 100%;
+    }
+}
+
+/* Whitelist remove button */
+.whitelist-remove-button {
+    flex: 0 0 auto;
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 11px;
+}

@@ -40,6 +40,9 @@ const elements = {
     onlinePlayersTag: document.getElementById("online-players-tag"),
     whitelistList: document.getElementById("whitelist-list"),
     whitelistTag: document.getElementById("whitelist-tag"),
+    whitelistForm: document.getElementById("whitelist-form"),
+    whitelistPlayerName: document.getElementById("whitelist-player-name"),
+    addWhitelistPlayerButton: document.getElementById("add-whitelist-player-button"),
     operatorsList: document.getElementById("operators-list"),
     operatorsTag: document.getElementById("operators-tag")
 };
@@ -132,6 +135,65 @@ async function apiPut(path, payload) {
     }
 }
 
+async function apiWrite(path, method, payload) {
+    if (!["POST", "DELETE"].includes(method)) {
+        throw new Error("Unsupported write method");
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(
+        () => controller.abort(),
+        REQUEST_TIMEOUT_MS
+    );
+
+    try {
+        const response = await fetch(`${API_BASE}${path}`, {
+            method,
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            cache: "no-store",
+            signal: controller.signal,
+            body: JSON.stringify(payload)
+        });
+
+        let data = null;
+        try {
+            data = await response.json();
+        } catch {
+            // Handle an empty or non-JSON response safely.
+        }
+
+        if (!response.ok) {
+            const detail = typeof data?.detail === "string"
+                ? data.detail
+                : `HTTP ${response.status}`;
+            throw new Error(detail);
+        }
+
+        return data;
+    } catch (error) {
+        if (error.name === "AbortError") {
+            throw new Error("Request timed out");
+        }
+        if (error instanceof TypeError) {
+            throw new Error("Could not reach the API from this page");
+        }
+        throw error;
+    } finally {
+        window.clearTimeout(timeout);
+    }
+}
+
+function apiPost(path, payload) {
+    return apiWrite(path, "POST", payload);
+}
+
+function apiDelete(path, payload) {
+    return apiWrite(path, "DELETE", payload);
+}
 function setGamerulesMessage(message, isError = false) {
     if (!elements.gamerulesMessage) return;
     elements.gamerulesMessage.textContent = message;
@@ -526,7 +588,13 @@ function getPlayerDisplayName(player) {
     return "";
 }
 
-function renderPlayerList(container, tag, players, emptyMessage) {
+function renderPlayerList(
+    container,
+    tag,
+    players,
+    emptyMessage,
+    allowWhitelistRemoval = false
+) {
     if (!container) return;
 
     container.replaceChildren();
@@ -549,8 +617,23 @@ function renderPlayerList(container, tag, players, emptyMessage) {
         const label = document.createElement("span");
         label.className = "player-name";
         label.textContent = name;
-
         row.append(label);
+
+        if (allowWhitelistRemoval) {
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "button button-secondary whitelist-remove-button";
+            removeButton.textContent = "Remove";
+            removeButton.setAttribute(
+                "aria-label",
+                `Remove ${name} from whitelist`
+            );
+            removeButton.addEventListener("click", () => {
+                removeWhitelistPlayer(name, removeButton);
+            });
+            row.append(removeButton);
+        }
+
         container.append(row);
     }
 }
@@ -591,7 +674,8 @@ async function loadPlayerManagement() {
             label: "whitelist",
             container: elements.whitelistList,
             tag: elements.whitelistTag,
-            empty: "The whitelist is empty."
+            empty: "The whitelist is empty.",
+            removable: true
         },
         {
             path: "/player/operators",
@@ -615,7 +699,8 @@ async function loadPlayerManagement() {
                     list.container,
                     list.tag,
                     data.players,
-                    list.empty
+                    list.empty,
+                    list.removable === true
                 );
 
                 return { label: list.label, ok: true };
@@ -638,6 +723,8 @@ async function loadPlayerManagement() {
                 ? "All player lists loaded successfully."
                 : `Some lists could not be loaded: ${failed.map((item) => item.label).join(", ")}.`
         );
+
+        return failed.length === 0;
     } finally {
         if (button) {
             button.disabled = false;
@@ -646,6 +733,114 @@ async function loadPlayerManagement() {
     }
 }
 
+async function removeWhitelistPlayer(name, button) {
+    if (typeof name !== "string" || !name.trim()) return;
+    if (button?.disabled) return;
+
+    const confirmed = window.confirm(
+        `Remove "${name}" from the whitelist?\n\n` +
+        "This does not kick the player if they are already online."
+    );
+
+    if (!confirmed) return;
+
+    if (button) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+    }
+
+    setText(
+        elements.playerManagementMessage,
+        `Removing "${name}" from the whitelist...`
+    );
+
+    try {
+        await apiDelete("/player/whitelist", {
+            player: { name }
+        });
+
+        const refreshed = await loadPlayerManagement();
+
+        setText(
+            elements.playerManagementMessage,
+            refreshed
+                ? `Removed "${name}" from the whitelist.`
+                : `Removed "${name}" from the whitelist, but one or more lists could not refresh. Use Refresh players to retry.`
+        );
+    } catch (error) {
+        const detail = error instanceof Error
+            ? error.message
+            : "Unknown error";
+
+        setText(
+            elements.playerManagementMessage,
+            `Could not remove "${name}" from the whitelist: ${detail}`
+        );
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
+    }
+}
+async function addWhitelistPlayer(event) {
+    event.preventDefault();
+
+    const input = elements.whitelistPlayerName;
+    const button = elements.addWhitelistPlayerButton;
+
+    if (!input || !button || button.disabled) return;
+
+    const name = input.value.trim();
+
+    if (!name) {
+        setText(elements.playerManagementMessage, "Enter a player name.");
+        input.focus();
+        return;
+    }
+
+    if (name.length > 64 || /[\x00-\x1F\x7F]/.test(name)) {
+        setText(
+            elements.playerManagementMessage,
+            "The player name is invalid. Use at most 64 characters without control characters."
+        );
+        input.focus();
+        return;
+    }
+
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = "Adding...";
+    setText(elements.playerManagementMessage, `Adding "${name}" to the whitelist...`);
+
+    try {
+        await apiPost("/player/whitelist", {
+            player: { name }
+        });
+
+        input.value = "";
+        const refreshed = await loadPlayerManagement();
+
+        setText(
+            elements.playerManagementMessage,
+            refreshed
+                ? `Added "${name}" to the whitelist.`
+                : `Added "${name}" to the whitelist, but one or more lists could not refresh. Use Refresh players to retry.`
+        );
+    } catch (error) {
+        const detail = error instanceof Error
+            ? error.message
+            : "Unknown error";
+
+        setText(
+            elements.playerManagementMessage,
+            `Could not add "${name}" to the whitelist: ${detail}`
+        );
+    } finally {
+        button.disabled = false;
+        button.textContent = originalLabel || "Add player";
+    }
+}
 async function refreshDashboard() {
     if (elements.refreshButton) {
         elements.refreshButton.disabled = true;
@@ -807,6 +1002,9 @@ if (elements.refreshButton) {
     elements.refreshButton.addEventListener("click", refreshDashboard);
 }
 
+if (elements.whitelistForm) {
+    elements.whitelistForm.addEventListener("submit", addWhitelistPlayer);
+}
 if (elements.refreshPlayersButton) {
     elements.refreshPlayersButton.addEventListener("click", loadPlayerManagement);
 }

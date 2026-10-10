@@ -185,6 +185,29 @@
                             <h3 id="whitelist-heading">Whitelist</h3>
                             <span class="panel-tag" id="whitelist-tag">Loading</span>
                         </div>
+                        <form class="whitelist-form" id="whitelist-form" autocomplete="off">
+                            <label for="whitelist-player-name">Add a player</label>
+                            <div class="whitelist-form-row">
+                                <input
+                                    id="whitelist-player-name"
+                                    name="player"
+                                    type="text"
+                                    maxlength="64"
+                                    autocomplete="off"
+                                    autocapitalize="none"
+                                    spellcheck="false"
+                                    placeholder="Player name"
+                                    aria-describedby="whitelist-form-help"
+                                    required
+                                >
+                                <button class="button" id="add-whitelist-player-button" type="submit">
+                                    Add player
+                                </button>
+                            </div>
+                            <p class="whitelist-form-help" id="whitelist-form-help">
+                                Enter the exact server name. Floodgate Bedrock names may start with a dot.
+                            </p>
+                        </form>
                         <div class="player-list" id="whitelist-list" aria-live="polite">
                             <div class="loading-state">Loading whitelist...</div>
                         </div>
