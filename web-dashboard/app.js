@@ -33,7 +33,15 @@ const elements = {
     loadGamerulesButton: document.getElementById("load-gamerules-button"),
     gamerulesMessage: document.getElementById("gamerules-message"),
     gamerulesList: document.getElementById("gamerules-list"),
-    gamerulesTag: document.getElementById("gamerules-tag")
+    gamerulesTag: document.getElementById("gamerules-tag"),
+    playerManagementMessage: document.getElementById("player-management-message"),
+    refreshPlayersButton: document.getElementById("refresh-players-button"),
+    onlinePlayersList: document.getElementById("online-players-list"),
+    onlinePlayersTag: document.getElementById("online-players-tag"),
+    whitelistList: document.getElementById("whitelist-list"),
+    whitelistTag: document.getElementById("whitelist-tag"),
+    operatorsList: document.getElementById("operators-list"),
+    operatorsTag: document.getElementById("operators-tag")
 };
 
 function setText(element, value) {
@@ -500,6 +508,144 @@ function renderWorlds(worldsData, multiverseData) {
     }
 }
 
+function getPlayerDisplayName(player) {
+    const candidates = [
+        typeof player === "string" ? player : "",
+        player?.name,
+        player?.player?.name,
+        player?.profile?.name,
+        player?.username
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim()) {
+            return candidate.trim();
+        }
+    }
+
+    return "";
+}
+
+function renderPlayerList(container, tag, players, emptyMessage) {
+    if (!container) return;
+
+    container.replaceChildren();
+
+    const names = players.map(getPlayerDisplayName).filter(Boolean);
+    setText(tag, `${names.length} players`);
+
+    if (names.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = emptyMessage;
+        container.append(empty);
+        return;
+    }
+
+    for (const name of names) {
+        const row = document.createElement("div");
+        row.className = "player-row";
+
+        const label = document.createElement("span");
+        label.className = "player-name";
+        label.textContent = name;
+
+        row.append(label);
+        container.append(row);
+    }
+}
+
+function renderPlayerListError(container, tag, message) {
+    if (container) {
+        container.replaceChildren();
+
+        const error = document.createElement("div");
+        error.className = "error-state";
+        error.textContent = `Could not load list: ${message}`;
+        container.append(error);
+    }
+
+    setText(tag, "Unavailable");
+}
+
+async function loadPlayerManagement() {
+    const button = elements.refreshPlayersButton;
+
+    if (button) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+    }
+
+    setText(elements.playerManagementMessage, "Loading player lists...");
+
+    const lists = [
+        {
+            path: "/player/list",
+            label: "online players",
+            container: elements.onlinePlayersList,
+            tag: elements.onlinePlayersTag,
+            empty: "No players are online."
+        },
+        {
+            path: "/player/whitelist",
+            label: "whitelist",
+            container: elements.whitelistList,
+            tag: elements.whitelistTag,
+            empty: "The whitelist is empty."
+        },
+        {
+            path: "/player/operators",
+            label: "operators",
+            container: elements.operatorsList,
+            tag: elements.operatorsTag,
+            empty: "No operators were returned."
+        }
+    ];
+
+    try {
+        const results = await Promise.all(lists.map(async (list) => {
+            try {
+                const data = await apiGet(list.path);
+
+                if (!Array.isArray(data?.players)) {
+                    throw new Error("Unexpected API response");
+                }
+
+                renderPlayerList(
+                    list.container,
+                    list.tag,
+                    data.players,
+                    list.empty
+                );
+
+                return { label: list.label, ok: true };
+            } catch (error) {
+                renderPlayerListError(
+                    list.container,
+                    list.tag,
+                    error instanceof Error ? error.message : "Unknown error"
+                );
+
+                return { label: list.label, ok: false };
+            }
+        }));
+
+        const failed = results.filter((result) => !result.ok);
+
+        setText(
+            elements.playerManagementMessage,
+            failed.length === 0
+                ? "All player lists loaded successfully."
+                : `Some lists could not be loaded: ${failed.map((item) => item.label).join(", ")}.`
+        );
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
+    }
+}
+
 async function refreshDashboard() {
     if (elements.refreshButton) {
         elements.refreshButton.disabled = true;
@@ -661,6 +807,10 @@ if (elements.refreshButton) {
     elements.refreshButton.addEventListener("click", refreshDashboard);
 }
 
+if (elements.refreshPlayersButton) {
+    elements.refreshPlayersButton.addEventListener("click", loadPlayerManagement);
+}
+
 if (elements.loadGamerulesButton) {
     elements.loadGamerulesButton.addEventListener("click", () => loadWorldGamerules());
 }
@@ -682,3 +832,4 @@ if (elements.dashboardYear) {
 }
 
 refreshDashboard();
+loadPlayerManagement();

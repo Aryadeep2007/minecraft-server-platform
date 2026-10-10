@@ -25,7 +25,7 @@
                 <a class="nav-item active" href="#overview">
                     <span aria-hidden="true">&#9635;</span> Overview
                 </a>
-                <a class="nav-item" href="#players">
+                <a class="nav-item" href="#player-management">
                     <span aria-hidden="true">&#9823;</span> Players
                 </a>
                 <a class="nav-item" href="#worlds">
@@ -154,6 +154,53 @@
                 </article>
             </section>
 
+            <section class="panel player-management-panel" id="player-management">
+                <div class="panel-heading">
+                    <div>
+                        <h2>Player Management</h2>
+                        <p>Online players, whitelist entries, and server operators.</p>
+                    </div>
+                    <button class="button button-secondary" id="refresh-players-button" type="button">
+                        Refresh players
+                    </button>
+                </div>
+
+                <div class="player-management-message" id="player-management-message" role="status" aria-live="polite">
+                    Loading player information...
+                </div>
+
+                <div class="player-management-grid">
+                    <section class="player-list-panel" aria-labelledby="online-players-heading">
+                        <div class="player-list-heading">
+                            <h3 id="online-players-heading">Online players</h3>
+                            <span class="panel-tag" id="online-players-tag">Loading</span>
+                        </div>
+                        <div class="player-list" id="online-players-list" aria-live="polite">
+                            <div class="loading-state">Loading online players...</div>
+                        </div>
+                    </section>
+
+                    <section class="player-list-panel" aria-labelledby="whitelist-heading">
+                        <div class="player-list-heading">
+                            <h3 id="whitelist-heading">Whitelist</h3>
+                            <span class="panel-tag" id="whitelist-tag">Loading</span>
+                        </div>
+                        <div class="player-list" id="whitelist-list" aria-live="polite">
+                            <div class="loading-state">Loading whitelist...</div>
+                        </div>
+                    </section>
+
+                    <section class="player-list-panel" aria-labelledby="operators-heading">
+                        <div class="player-list-heading">
+                            <h3 id="operators-heading">Operators (OP)</h3>
+                            <span class="panel-tag" id="operators-tag">Loading</span>
+                        </div>
+                        <div class="player-list" id="operators-list" aria-live="polite">
+                            <div class="loading-state">Loading operators...</div>
+                        </div>
+                    </section>
+                </div>
+            </section>
             <section class="panel gamerules-panel" id="gamerules">
                 <div class="panel-heading">
                     <div>
