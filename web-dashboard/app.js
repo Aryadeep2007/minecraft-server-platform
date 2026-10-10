@@ -49,7 +49,11 @@ const elements = {
     operatorPlayerName: document.getElementById("operator-player-name"),
     operatorPermissionLevel: document.getElementById("operator-permission-level"),
     operatorBypassPlayerLimit: document.getElementById("operator-bypass-player-limit"),
-    grantOperatorButton: document.getElementById("grant-operator-button")
+    grantOperatorButton: document.getElementById("grant-operator-button"),
+    moderationBanReason: document.getElementById("moderation-ban-reason"),
+    moderationBanDuration: document.getElementById("moderation-ban-duration"),
+    bannedPlayersList: document.getElementById("banned-players-list"),
+    bannedPlayersTag: document.getElementById("banned-players-tag")
 };
 
 function setText(element, value) {
@@ -593,22 +597,48 @@ function getPlayerDisplayName(player) {
     return "";
 }
 
+function getPlayerIdentity(player) {
+    const name = getPlayerDisplayName(player);
+    const candidates = [
+        player?.id,
+        player?.player?.id,
+        player?.profile?.id
+    ];
+
+    for (const candidate of candidates) {
+        if (typeof candidate === "string" && candidate.trim()) {
+            if (name) {
+                return { name, id: candidate.trim() };
+            }
+        }
+    }
+
+    return null;
+}
 function renderPlayerList(
     container,
     tag,
     players,
     emptyMessage,
     allowWhitelistRemoval = false,
-    allowOperatorRemoval = false
+    allowOperatorRemoval = false,
+    allowModerationActions = false,
+    allowBanRemoval = false
 ) {
     if (!container) return;
 
     container.replaceChildren();
 
-    const names = players.map(getPlayerDisplayName).filter(Boolean);
-    setText(tag, `${names.length} players`);
+    const entries = players
+        .map((player) => ({
+            player,
+            name: getPlayerDisplayName(player)
+        }))
+        .filter((entry) => entry.name);
 
-    if (names.length === 0) {
+    setText(tag, `${entries.length} players`);
+
+    if (entries.length === 0) {
         const empty = document.createElement("div");
         empty.className = "empty-state";
         empty.textContent = emptyMessage;
@@ -616,7 +646,8 @@ function renderPlayerList(
         return;
     }
 
-    for (const name of names) {
+    for (const entry of entries) {
+        const { player, name } = entry;
         const row = document.createElement("div");
         row.className = "player-row";
 
@@ -624,6 +655,60 @@ function renderPlayerList(
         label.className = "player-name";
         label.textContent = name;
         row.append(label);
+
+        if (allowBanRemoval) {
+            const identity = getPlayerIdentity(player);
+
+            if (identity) {
+                const unbanButton = document.createElement("button");
+                unbanButton.type = "button";
+                unbanButton.className = "button button-secondary moderation-action-button";
+                unbanButton.textContent = "Unban";
+                unbanButton.setAttribute("aria-label", `Unban ${name}`);
+                unbanButton.addEventListener("click", () => {
+                    removeBan(identity, unbanButton);
+                });
+                row.append(unbanButton);
+            } else {
+                const unavailable = document.createElement("span");
+                unavailable.className = "moderation-unavailable";
+                unavailable.textContent = "ID unavailable";
+                unavailable.title = "Unban requires a player ID from the server.";
+                row.append(unavailable);
+            }
+        }
+
+        if (allowModerationActions) {
+            const identity = getPlayerIdentity(player);
+
+            if (identity) {
+                const kickButton = document.createElement("button");
+                kickButton.type = "button";
+                kickButton.className = "button button-secondary moderation-action-button";
+                kickButton.textContent = "Kick";
+                kickButton.setAttribute("aria-label", `Kick ${name}`);
+                kickButton.addEventListener("click", () => {
+                    kickPlayer(identity, kickButton);
+                });
+                row.append(kickButton);
+
+                const banButton = document.createElement("button");
+                banButton.type = "button";
+                banButton.className = "button button-secondary moderation-action-button";
+                banButton.textContent = "Ban";
+                banButton.setAttribute("aria-label", `Ban ${name}`);
+                banButton.addEventListener("click", () => {
+                    banPlayer(identity, banButton);
+                });
+                row.append(banButton);
+            } else {
+                const unavailable = document.createElement("span");
+                unavailable.className = "moderation-unavailable";
+                unavailable.textContent = "ID unavailable";
+                unavailable.title = "Kick and Ban require a player ID from the server.";
+                row.append(unavailable);
+            }
+        }
 
         if (allowWhitelistRemoval) {
             const removeButton = document.createElement("button");
@@ -688,7 +773,8 @@ async function loadPlayerManagement() {
             label: "online players",
             container: elements.onlinePlayersList,
             tag: elements.onlinePlayersTag,
-            empty: "No players are online."
+            empty: "No players are online.",
+            moderate: true
         },
         {
             path: "/player/whitelist",
@@ -705,6 +791,14 @@ async function loadPlayerManagement() {
             tag: elements.operatorsTag,
             empty: "No operators were returned.",
             operatorRemovable: true
+        },
+        {
+            path: "/player/bans",
+            label: "banned players",
+            container: elements.bannedPlayersList,
+            tag: elements.bannedPlayersTag,
+            empty: "No players are banned.",
+            banRemovable: true
         }
     ];
 
@@ -723,7 +817,9 @@ async function loadPlayerManagement() {
                     data.players,
                     list.empty,
                     list.removable === true,
-                    list.operatorRemovable === true
+                    list.operatorRemovable === true,
+                    list.moderate === true,
+                    list.banRemovable === true
                 );
 
                 return { label: list.label, ok: true };
@@ -862,6 +958,264 @@ async function addWhitelistPlayer(event) {
     } finally {
         button.disabled = false;
         button.textContent = originalLabel || "Add player";
+    }
+}
+async function banPlayer(identity, button) {
+    if (
+        !identity ||
+        typeof identity.name !== "string" ||
+        !identity.name.trim() ||
+        typeof identity.id !== "string" ||
+        !identity.id.trim()
+    ) {
+        setText(
+            elements.playerManagementMessage,
+            "Cannot ban this player because their identity is incomplete."
+        );
+        return;
+    }
+
+    if (button?.disabled) return;
+
+    const reasonInput = elements.moderationBanReason;
+    const durationSelect = elements.moderationBanDuration;
+
+    if (!reasonInput || !durationSelect) {
+        setText(
+            elements.playerManagementMessage,
+            "Ban controls are unavailable. Refresh the dashboard and try again."
+        );
+        return;
+    }
+
+    const reason = reasonInput.value.trim();
+
+    if (!reason) {
+        setText(
+            elements.playerManagementMessage,
+            "Enter a reason before banning a player."
+        );
+        reasonInput.focus();
+        return;
+    }
+
+    if (reason.length > 160 || /[\x00-\x1F\x7F]/.test(reason)) {
+        setText(
+            elements.playerManagementMessage,
+            "The ban reason must be at most 160 characters and contain no control characters."
+        );
+        reasonInput.focus();
+        return;
+    }
+
+    const duration = durationSelect.value;
+    const durations = {
+        "1h": { label: "1 hour", milliseconds: 60 * 60 * 1000 },
+        "24h": { label: "24 hours", milliseconds: 24 * 60 * 60 * 1000 },
+        "7d": { label: "7 days", milliseconds: 7 * 24 * 60 * 60 * 1000 },
+        "permanent": { label: "Permanent", milliseconds: null }
+    };
+
+    const durationInfo = durations[duration];
+
+    if (!durationInfo) {
+        setText(
+            elements.playerManagementMessage,
+            "Choose a valid ban duration."
+        );
+        durationSelect.focus();
+        return;
+    }
+
+    const expires = durationInfo.milliseconds === null
+        ? null
+        : new Date(Date.now() + durationInfo.milliseconds).toISOString();
+
+    const confirmed = window.confirm(
+        `Ban "${identity.name}"?\n\n` +
+        `Duration: ${durationInfo.label}\n` +
+        `Reason: ${reason}\n\n` +
+        "The player will be prevented from joining while the ban is active."
+    );
+
+    if (!confirmed) return;
+
+    if (button) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+    }
+
+    setText(
+        elements.playerManagementMessage,
+        `Banning "${identity.name}"...`
+    );
+
+    try {
+        await apiPost("/player/bans", {
+            player: {
+                name: identity.name,
+                id: identity.id
+            },
+            reason,
+            source: "Management API",
+            expires
+        });
+
+        const refreshed = await loadPlayerManagement();
+
+        setText(
+            elements.playerManagementMessage,
+            refreshed
+                ? `Banned "${identity.name}" (${durationInfo.label}).`
+                : `Banned "${identity.name}", but one or more player lists could not refresh. Use Refresh players to retry.`
+        );
+    } catch (error) {
+        const detail = error instanceof Error
+            ? error.message
+            : "Unknown error";
+
+        setText(
+            elements.playerManagementMessage,
+            `Could not ban "${identity.name}": ${detail}`
+        );
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
+    }
+}
+async function kickPlayer(identity, button) {
+    if (
+        !identity ||
+        typeof identity.name !== "string" ||
+        !identity.name.trim() ||
+        typeof identity.id !== "string" ||
+        !identity.id.trim()
+    ) {
+        setText(
+            elements.playerManagementMessage,
+            "Cannot kick this player because their identity is incomplete."
+        );
+        return;
+    }
+
+    if (button?.disabled) return;
+
+    const confirmed = window.confirm(
+        `Kick "${identity.name}" from the server?\n\n` +
+        "This disconnects the player but does not ban them."
+    );
+
+    if (!confirmed) return;
+
+    if (button) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+    }
+
+    setText(
+        elements.playerManagementMessage,
+        `Kicking "${identity.name}"...`
+    );
+
+    try {
+        await apiPost("/player/kick", {
+            player: {
+                name: identity.name,
+                id: identity.id
+            },
+            message: "Kicked by server administrator"
+        });
+
+        const refreshed = await loadPlayerManagement();
+
+        setText(
+            elements.playerManagementMessage,
+            refreshed
+                ? `Kicked "${identity.name}" from the server.`
+                : `Kicked "${identity.name}", but one or more player lists could not refresh. Use Refresh players to retry.`
+        );
+    } catch (error) {
+        const detail = error instanceof Error
+            ? error.message
+            : "Unknown error";
+
+        setText(
+            elements.playerManagementMessage,
+            `Could not kick "${identity.name}": ${detail}`
+        );
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
+    }
+}
+async function removeBan(identity, button) {
+    if (
+        !identity ||
+        typeof identity.name !== "string" ||
+        !identity.name.trim() ||
+        typeof identity.id !== "string" ||
+        !identity.id.trim()
+    ) {
+        setText(
+            elements.playerManagementMessage,
+            "Cannot unban this entry because its player identity is incomplete."
+        );
+        return;
+    }
+
+    if (button?.disabled) return;
+
+    const confirmed = window.confirm(
+        `Unban "${identity.name}"?\n\n` +
+        "This removes the player's ban. It does not add them to the whitelist."
+    );
+
+    if (!confirmed) return;
+
+    if (button) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+    }
+
+    setText(
+        elements.playerManagementMessage,
+        `Removing the ban for "${identity.name}"...`
+    );
+
+    try {
+        await apiDelete("/player/bans", {
+            player: {
+                name: identity.name,
+                id: identity.id
+            }
+        });
+
+        const refreshed = await loadPlayerManagement();
+
+        setText(
+            elements.playerManagementMessage,
+            refreshed
+                ? `Removed the ban for "${identity.name}".`
+                : `Removed the ban for "${identity.name}", but one or more player lists could not refresh. Use Refresh players to retry.`
+        );
+    } catch (error) {
+        const detail = error instanceof Error
+            ? error.message
+            : "Unknown error";
+
+        setText(
+            elements.playerManagementMessage,
+            `Could not unban "${identity.name}": ${detail}`
+        );
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
     }
 }
 async function removeOperator(name, button) {
