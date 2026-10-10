@@ -44,7 +44,12 @@ const elements = {
     whitelistPlayerName: document.getElementById("whitelist-player-name"),
     addWhitelistPlayerButton: document.getElementById("add-whitelist-player-button"),
     operatorsList: document.getElementById("operators-list"),
-    operatorsTag: document.getElementById("operators-tag")
+    operatorsTag: document.getElementById("operators-tag"),
+    operatorForm: document.getElementById("operator-form"),
+    operatorPlayerName: document.getElementById("operator-player-name"),
+    operatorPermissionLevel: document.getElementById("operator-permission-level"),
+    operatorBypassPlayerLimit: document.getElementById("operator-bypass-player-limit"),
+    grantOperatorButton: document.getElementById("grant-operator-button")
 };
 
 function setText(element, value) {
@@ -593,7 +598,8 @@ function renderPlayerList(
     tag,
     players,
     emptyMessage,
-    allowWhitelistRemoval = false
+    allowWhitelistRemoval = false,
+    allowOperatorRemoval = false
 ) {
     if (!container) return;
 
@@ -632,6 +638,21 @@ function renderPlayerList(
                 removeWhitelistPlayer(name, removeButton);
             });
             row.append(removeButton);
+        }
+
+        if (allowOperatorRemoval) {
+            const revokeButton = document.createElement("button");
+            revokeButton.type = "button";
+            revokeButton.className = "button button-secondary operator-revoke-button";
+            revokeButton.textContent = "Revoke OP";
+            revokeButton.setAttribute(
+                "aria-label",
+                `Revoke operator privileges for ${name}`
+            );
+            revokeButton.addEventListener("click", () => {
+                removeOperator(name, revokeButton);
+            });
+            row.append(revokeButton);
         }
 
         container.append(row);
@@ -682,7 +703,8 @@ async function loadPlayerManagement() {
             label: "operators",
             container: elements.operatorsList,
             tag: elements.operatorsTag,
-            empty: "No operators were returned."
+            empty: "No operators were returned.",
+            operatorRemovable: true
         }
     ];
 
@@ -700,7 +722,8 @@ async function loadPlayerManagement() {
                     list.tag,
                     data.players,
                     list.empty,
-                    list.removable === true
+                    list.removable === true,
+                    list.operatorRemovable === true
                 );
 
                 return { label: list.label, ok: true };
@@ -839,6 +862,143 @@ async function addWhitelistPlayer(event) {
     } finally {
         button.disabled = false;
         button.textContent = originalLabel || "Add player";
+    }
+}
+async function removeOperator(name, button) {
+    if (typeof name !== "string" || !name.trim()) return;
+    if (button?.disabled) return;
+
+    const confirmed = window.confirm(
+        `Revoke operator privileges from "${name}"?\n\n` +
+        "The player will lose OP permissions. This does not kick them from the server."
+    );
+
+    if (!confirmed) return;
+
+    if (button) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+    }
+
+    setText(
+        elements.playerManagementMessage,
+        `Revoking OP from "${name}"...`
+    );
+
+    try {
+        await apiDelete("/player/operators", {
+            player: { name }
+        });
+
+        const refreshed = await loadPlayerManagement();
+
+        setText(
+            elements.playerManagementMessage,
+            refreshed
+                ? `Revoked OP from "${name}".`
+                : `Revoked OP from "${name}", but one or more player lists could not refresh. Use Refresh players to retry.`
+        );
+    } catch (error) {
+        const detail = error instanceof Error
+            ? error.message
+            : "Unknown error";
+
+        setText(
+            elements.playerManagementMessage,
+            `Could not revoke OP from "${name}": ${detail}`
+        );
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
+    }
+}
+async function grantOperator(event) {
+    event.preventDefault();
+
+    const input = elements.operatorPlayerName;
+    const levelSelect = elements.operatorPermissionLevel;
+    const bypassCheckbox = elements.operatorBypassPlayerLimit;
+    const button = elements.grantOperatorButton;
+
+    if (!input || !levelSelect || !bypassCheckbox || !button || button.disabled) {
+        return;
+    }
+
+    const name = input.value.trim();
+
+    if (!name) {
+        setText(elements.playerManagementMessage, "Enter a player name.");
+        input.focus();
+        return;
+    }
+
+    if (name.length > 64 || /[\x00-\x1F\x7F]/.test(name)) {
+        setText(
+            elements.playerManagementMessage,
+            "The player name is invalid. Use at most 64 characters without control characters."
+        );
+        input.focus();
+        return;
+    }
+
+    const permissionLevel = Number(levelSelect.value);
+
+    if (!Number.isInteger(permissionLevel) || permissionLevel < 1 || permissionLevel > 4) {
+        setText(elements.playerManagementMessage, "Choose an operator permission level from 1 to 4.");
+        levelSelect.focus();
+        return;
+    }
+
+    const bypassesPlayerLimit = bypassCheckbox.checked;
+
+    const confirmed = window.confirm(
+        `Grant OP to "${name}"?\n\n` +
+        `Permission level: ${permissionLevel}\n` +
+        `Can bypass player limit: ${bypassesPlayerLimit ? "Yes" : "No"}\n\n` +
+        "Only grant operator access to trusted players."
+    );
+
+    if (!confirmed) return;
+
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.textContent = "Granting...";
+    setText(elements.playerManagementMessage, `Granting OP to "${name}"...`);
+
+    try {
+        await apiPost("/player/operators", {
+            operator: {
+                player: { name },
+                permissionLevel,
+                bypassesPlayerLimit
+            }
+        });
+
+        input.value = "";
+        const refreshed = await loadPlayerManagement();
+
+        setText(
+            elements.playerManagementMessage,
+            refreshed
+                ? `Granted OP to "${name}" at permission level ${permissionLevel}.`
+                : `Granted OP to "${name}", but one or more player lists could not refresh. Use Refresh players to retry.`
+        );
+    } catch (error) {
+        const detail = error instanceof Error
+            ? error.message
+            : "Unknown error";
+
+        setText(
+            elements.playerManagementMessage,
+            `Could not grant OP to "${name}": ${detail}`
+        );
+    } finally {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+        button.textContent = originalLabel || "Grant OP";
     }
 }
 async function refreshDashboard() {
@@ -1002,6 +1162,9 @@ if (elements.refreshButton) {
     elements.refreshButton.addEventListener("click", refreshDashboard);
 }
 
+if (elements.operatorForm) {
+    elements.operatorForm.addEventListener("submit", grantOperator);
+}
 if (elements.whitelistForm) {
     elements.whitelistForm.addEventListener("submit", addWhitelistPlayer);
 }

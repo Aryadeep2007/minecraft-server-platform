@@ -218,6 +218,42 @@
                             <h3 id="operators-heading">Operators (OP)</h3>
                             <span class="panel-tag" id="operators-tag">Loading</span>
                         </div>
+                        <form class="operator-form" id="operator-form" autocomplete="off">
+                            <label for="operator-player-name">Grant operator access</label>
+                            <div class="operator-form-fields">
+                                <input
+                                    id="operator-player-name"
+                                    name="player"
+                                    type="text"
+                                    maxlength="64"
+                                    autocomplete="off"
+                                    autocapitalize="none"
+                                    spellcheck="false"
+                                    placeholder="Player name"
+                                    required
+                                >
+                                <select id="operator-permission-level" name="permissionLevel" aria-label="Operator permission level" required>
+                                    <option value="1" selected>Level 1 - Basic privileges</option>
+                                    <option value="2">Level 2 - Game commands</option>
+                                    <option value="3">Level 3 - Advanced administration</option>
+                                    <option value="4">Level 4 - Full server control</option>
+                                </select>
+                            </div>
+                            <label class="operator-bypass-field" for="operator-bypass-player-limit">
+                                <input
+                                    id="operator-bypass-player-limit"
+                                    name="bypassesPlayerLimit"
+                                    type="checkbox"
+                                >
+                                Allow joining when the server is full
+                            </label>
+                            <button class="button" id="grant-operator-button" type="submit">
+                                Grant OP
+                            </button>
+                            <p class="whitelist-form-help">
+                                Only grant OP to trusted players. Choose the lowest permission level they need.
+                            </p>
+                        </form>
                         <div class="player-list" id="operators-list" aria-live="polite">
                             <div class="loading-state">Loading operators...</div>
                         </div>
