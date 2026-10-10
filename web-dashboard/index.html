@@ -158,7 +158,7 @@
                 <div class="panel-heading">
                     <div>
                         <h2>Player Management</h2>
-                        <p>Online players, whitelist entries, and server operators.</p>
+                        <p>Online players, whitelist entries, operators, and banned players.</p>
                     </div>
                     <button class="button button-secondary" id="refresh-players-button" type="button">
                         Refresh players
@@ -174,6 +174,26 @@
                         <div class="player-list-heading">
                             <h3 id="online-players-heading">Online players</h3>
                             <span class="panel-tag" id="online-players-tag">Loading</span>
+                        </div>
+                        <div class="moderation-options" id="moderation-options">
+                            <label for="moderation-ban-reason">Ban reason</label>
+                            <input
+                                id="moderation-ban-reason"
+                                type="text"
+                                maxlength="160"
+                                autocomplete="off"
+                                placeholder="Enter a reason before banning"
+                            >
+                            <label for="moderation-ban-duration">Ban duration</label>
+                            <select id="moderation-ban-duration">
+                                <option value="1h" selected>1 hour</option>
+                                <option value="24h">24 hours</option>
+                                <option value="7d">7 days</option>
+                                <option value="permanent">Permanent ban</option>
+                            </select>
+                            <p class="whitelist-form-help">
+                                Kick and Ban actions will be available beside online players.
+                            </p>
                         </div>
                         <div class="player-list" id="online-players-list" aria-live="polite">
                             <div class="loading-state">Loading online players...</div>
@@ -256,6 +276,15 @@
                         </form>
                         <div class="player-list" id="operators-list" aria-live="polite">
                             <div class="loading-state">Loading operators...</div>
+                        </div>
+                    </section>
+                    <section class="player-list-panel banned-players-panel" aria-labelledby="banned-players-heading">
+                        <div class="player-list-heading">
+                            <h3 id="banned-players-heading">Banned players</h3>
+                            <span class="panel-tag" id="banned-players-tag">Loading</span>
+                        </div>
+                        <div class="player-list" id="banned-players-list" aria-live="polite">
+                            <div class="loading-state">Loading banned players...</div>
                         </div>
                     </section>
                 </div>
