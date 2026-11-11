@@ -28,7 +28,7 @@ The changes below are included in the public `main` checkpoint dated 11 November
 - Verified the deployed dashboard and world-list page render in headless Edge over the private connection; no browser write action was submitted.
 - Added isolated ASGI tests for authenticated same-origin create/load/unload/archive/restore requests and cross-origin rejection, using a mocked bridge so no Paper world is created.
 - Added a hosted CI workflow for a disposable Paper 1.21.11 and Multiverse-Core 5.5.3 server, with verified downloads and lifecycle smoke coverage. Run `42977978430` passed create/load/unload/archive/restore and safety-guard checks; the workflow always stops the server and discards runner data.
-- Extended the disposable lifecycle workflow with import/register and malformed restore-metadata rejection/recovery checks; the expanded run is pending.
+- Extended the disposable lifecycle workflow with import/register and malformed restore-metadata rejection/recovery checks; GitHub Actions run `42979533877` passed. Runner environment logs mask the generated bridge token.
 
 ### Changed
 

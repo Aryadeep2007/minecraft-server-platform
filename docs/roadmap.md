@@ -35,7 +35,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 - [x] Get a successful first integration run: GitHub Actions run `42977978430` passed with Paper 1.21.11 and Multiverse-Core 5.5.3.
 - [x] Cover successful create, load/unload, archive, and restore flows on disposable worlds.
 - [x] Cover primary-world archive rejection, missing-world load rejection, and confirmation mismatch.
-- [ ] Extend the CI smoke to import/register a copied disposable world and verify malformed restore metadata is rejected without moving the archive. The expanded run is pending.
+- [x] Extend the CI smoke to import/register a copied disposable world and verify malformed restore metadata is rejected without moving the archive. GitHub Actions run `42979533877` passed.
 - [ ] Cover import/register and injected failure/rollback behavior, including filesystem and Multiverse state consistency.
 - Never use production worlds as fixtures. Define resource limits, cleanup, and a backup/rollback plan before using any real test server.
 
