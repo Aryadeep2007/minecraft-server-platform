@@ -22,13 +22,13 @@ World lifecycle requests require the authenticated API, exact typed-name confirm
 
 ## Verification status and remaining work
 
-The checked-in API has 23 passing unit tests for identity/origin access control, request validation, archive path safety, registration links, and import behavior (one Windows symlink test may skip). The dashboard has 22 passing Node tests, and the bridge has 8 validation tests under Maven, including world-folder symlink checks (two may skip on Windows). The earlier 17-test Python suite passed on CT100's Linux runtime, including its symlink-registration test. No successful world lifecycle mutation has been exercised on the live server; create/import/load/unload/archive/restore need isolated integration coverage before routine use.
+The checked-in API has 26 tests, the dashboard has 22 Node tests, and the bridge has 8 validation tests under Maven; Windows may skip symlink cases where symlink creation is unavailable. GitHub Actions also passes an isolated Paper/Multiverse workflow covering create, import/register, load/unload, archive/restore, guards, malformed restore metadata rejection, and restore rollback after a forced Multiverse configuration-save failure. The disposable runner is cleaned up after each run. No successful world lifecycle mutation has been exercised on the live server.
 
 ### Next implementation order
 
-1. Add bridge integration tests against a disposable Paper/Multiverse test instance, including failure and rollback behavior.
-2. Add dashboard/API contract tests for lifecycle actions and accessible progress/error states.
-3. Document a repeatable deployment and rollback procedure for a clean installation.
+1. Verify the authenticated dashboard workflow with an interactive write action against disposable test data.
+2. Follow the setup guide from a clean clone and exercise backup restoration.
+3. Keep operational changes on the live server behind a verified backup, idle-server check, and rollback plan.
 4. Keep permanent deletion unavailable until off-host restore verification and retention behavior are demonstrated.
 
 Implemented operation contracts:

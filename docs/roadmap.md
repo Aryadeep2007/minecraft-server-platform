@@ -4,7 +4,7 @@
 
 **Published branch:** [`main`](https://github.com/Aryadeep2007/minecraft-server-platform/tree/main)
 
-**Latest verified checkpoint:** [`6360b09`](https://github.com/Aryadeep2007/minecraft-server-platform/commit/6360b09e7a67dfe801774642fab6c4de016737a6); [CI run 42964449233 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42964449233)
+**Latest verified checkpoint:** [`b6d7f43`](https://github.com/Aryadeep2007/minecraft-server-platform/commit/b6d7f43e20a3f64fcb7b4c35880c3823a7521df3); [isolated lifecycle run 42980370443 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42980370443); [CI run 42980370418 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42980370418)
 
 This page is the public summary of project progress and planned milestones. It excludes private deployment identifiers, access details, credentials, and player data. The separate [project handover](PROJECT_HANDOVER.md) contains dated technical context; verify dated infrastructure observations before relying on them.
 
@@ -20,10 +20,10 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 |---|---|
 | Platform foundation | Paper bridge, FastAPI API, dashboard, and integration documentation are in the repository. |
 | World management | Create, import/register, load/unload, and reversible archive/restore operations are implemented across the bridge, API, and dashboard with validation and safety checks. |
-| Component verification | 23 API tests, 22 dashboard tests, and 8 bridge tests passed in the published checkpoint; Windows may skip three symlink cases where symlink creation is unavailable. |
+| Component verification | 26 API tests, 22 dashboard tests, and 8 bridge tests passed in the published checkpoint; Windows may skip three symlink cases where symlink creation is unavailable. |
 | Deployment safety | The latest recorded deployment used a verified backup and rollback copy, followed by read only health checks. No production world lifecycle mutation is recorded. These observations are dated; check live status before operational work. |
 | Public repository foundation | Setup, security, backup/restore, troubleshooting, contributor guidance, changelog, and CI are published. The identified private IPv4 patterns were removed from reachable `main` history in an owner approved rewrite. |
-| Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for commit `6360b09`. |
+| Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for commit `b6d7f43`. |
 | Dashboard deployment | Deployed HTML/CSS now match the repository; JavaScript already matched. Live served-file hashes and active services were verified. Rollback copies are available. |
 | Isolated dashboard write path | ASGI tests send authenticated same-origin create/load/unload/archive/restore requests through FastAPI to a mocked bridge and verify cross-origin rejection. No Paper world is created. API suite now has 26 tests. |
 
@@ -35,11 +35,12 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 - [x] Get a successful first integration run: GitHub Actions run `42977978430` passed with Paper 1.21.11 and Multiverse-Core 5.5.3.
 - [x] Cover successful create, load/unload, archive, and restore flows on disposable worlds.
 - [x] Cover primary-world archive rejection, missing-world load rejection, and confirmation mismatch.
-- [x] Extend the CI smoke to import/register a copied disposable world and verify malformed restore metadata is rejected without moving the archive. GitHub Actions run `42979533877` passed.
-- [ ] Cover import/register and injected failure/rollback behavior, including filesystem and Multiverse state consistency.
+- [x] Import/register a copied disposable world and verify malformed restore metadata is rejected without moving the archive. GitHub Actions run `42979533877` passed.
+- [x] Force a Multiverse config save failure during restore; verify the world returns to the archive with metadata intact, then restore it successfully on retry. GitHub Actions run `42980370443` passed.
+- [x] Verify filesystem and Multiverse state consistency across covered lifecycle failure paths in the disposable CI server.
 - Never use production worlds as fixtures. Define resource limits, cleanup, and a backup/rollback plan before using any real test server.
 
-**Complete when:** lifecycle state transitions, import/register, and failure recovery are demonstrated without touching production worlds.
+**Complete:** covered lifecycle state transitions, import/register, malformed metadata rejection, and restore rollback/retry are demonstrated on disposable worlds. This does not validate production mutations.
 
 ### 2. Verify the authenticated browser workflow
 
@@ -94,7 +95,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 
 ### 8. Maintain the CI toolchain
 
-- Review the GitHub Actions warnings from run `42964449233` about the runner image migration and JavaScript action runtime deprecation.
+- Review the GitHub Actions warnings from run `42980370443` about the runner image migration and JavaScript action runtime deprecation.
 - Update pinned action versions when compatible releases are available, then confirm all CI jobs pass.
 
 **Complete when:** the workflow uses supported action runtimes and runner images without deprecation warnings.

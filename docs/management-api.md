@@ -88,4 +88,4 @@ Current local verification: 26 API tests (one Windows symlink limitation skip), 
 
 ## Deployment status and limitations
 
-The sanitized API source, dashboard, and rebuilt bridge were deployed to CT100 on 10 November 2026. A recent SSD-stored CT backup and rollback copies were verified before deployment. Both services are active. The private dashboard origin is held outside Git in a restricted file and systemd drop-in. No live world mutation was performed. A clean-clone installation and isolated Paper/Multiverse lifecycle integration test are still outstanding.
+The sanitized API source, dashboard, and rebuilt bridge were deployed to CT100 on 10 November 2026. A recent SSD-stored CT backup and rollback copies were verified before deployment. Both services are active. The private dashboard origin is held outside Git in a restricted file and systemd drop-in. No live world mutation was performed. The isolated Paper/Multiverse lifecycle checks now pass on GitHub Actions, including import/register, malformed restore metadata rejection, and rollback after a forced Multiverse save failure. A clean-clone installation remains outstanding.

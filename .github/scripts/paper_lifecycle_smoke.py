@@ -146,5 +146,5 @@ request("/worlds/archive", confirmation(WORLD))
 request("/worlds/archive", confirmation(IMPORTED_WORLD))
 print(
     "Disposable Paper lifecycle passed: create, import/register, load, unload, "
-    "archive, restore, guards, and restore rejection recovery."
+    "archive, restore, guards, metadata rejection, and restore rollback/retry."
 )
