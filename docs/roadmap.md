@@ -44,7 +44,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 
 ### 2. Verify the authenticated browser workflow
 
-- [x] Add a Chromium smoke against the same-origin dashboard and FastAPI API attached to disposable Paper/Multiverse; the browser creates a world, verifies the result in the UI/list, then unloads and archives it. The first run exposed and fixed a test assertion mismatch; a passing run is still required.
+- [x] Run Chromium against the same-origin dashboard and FastAPI API attached to disposable Paper/Multiverse; create a world, verify the UI and world list, then unload/archive it. GitHub Actions run [`42987990137`](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42987990137) passed after correcting the UI success-message assertion.
 - [x] Confirm the isolated API rejects requests without an allowlisted identity header. CI uses a synthetic identity on the local runner; it does not test the real proxy login.
 - [ ] Verify Tailscale Serve login/session behavior and the browser UI over the private production path without submitting a production world mutation.
 - [ ] Check rejected, canceled, and failed operations in the interactive browser and confirm the dashboard displays clear outcomes.
