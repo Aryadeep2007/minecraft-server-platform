@@ -2,6 +2,8 @@
 
 Notable project changes are recorded here. This changelog describes repository work and does not imply that local changes have been committed, released, or deployed.
 
+The changes below are included in the public `main` checkpoint dated 11 November 2026. This is a development checkpoint, not a versioned software release.
+
 ## [Unreleased]
 
 ### Added
@@ -33,7 +35,7 @@ Notable project changes are recorded here. This changelog describes repository w
 ### Security and privacy
 
 - Use no-follow filesystem checks when creating worlds so even a dangling symlink at the destination is treated as an existing path.
-- Replaced known private deployment and player identifiers in current public documentation with generic descriptions/placeholders. Older Git history still contains some previously documented identifiers; history cleanup has not been performed.
+- Replaced private deployment and player identifiers in current public documentation with generic descriptions/placeholders. The approved history rewrite also removed the identified private IPv4 patterns from reachable `main` history.
 
 ### Not included yet
 

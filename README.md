@@ -50,7 +50,7 @@ The browser should communicate with the management API, not directly with the Pa
 - Permanent world deletion with an off-host verified recovery point.
 - End-to-end tests against a real Paper server.
 
-Planned features are tracked in the private local roadmap and should not be represented as implemented until code and verification are added.
+See the public [project status and roadmap](docs/roadmap.md) for completed checkpoints, current verification gaps, and future milestones. Planned work is identified separately from implemented features.
 
 ## Repository map
 
@@ -63,6 +63,7 @@ Planned features are tracked in the private local roadmap and should not be repr
 │   ├── management-api.md
 │   ├── minecraft-server.md
 │   ├── PROJECT_HANDOVER.md
+│   ├── roadmap.md
 │   ├── proxmox.md
 │   ├── troubleshooting.md
 │   └── world-management.md
@@ -158,6 +159,7 @@ These tests use mocked `fetch` calls and do not contact Minecraft. The API tests
 - [Backup and isolated restore](docs/backup-and-restore.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Sanitized project handover](docs/PROJECT_HANDOVER.md)
+- [Project status, checkpoints, and future milestones](docs/roadmap.md)
 
 These files include deployment history and are being reconciled with the checked-in implementation. Treat version numbers and historical verification records as dated, environment-specific information.
 
