@@ -26,7 +26,7 @@ The checked-in API has 26 tests, the dashboard has 22 Node tests, and the bridge
 
 ### Next implementation order
 
-1. Verify the authenticated dashboard workflow with an interactive write action against disposable test data.
+1. Verify actual Tailscale Serve login/session behavior and browser error/cancellation states; the CI browser uses a synthetic identity header.
 2. Follow the setup guide from a clean clone and exercise backup restoration.
 3. Keep operational changes on the live server behind a verified backup, idle-server check, and rollback plan.
 4. Keep permanent deletion unavailable until off-host restore verification and retention behavior are demonstrated.

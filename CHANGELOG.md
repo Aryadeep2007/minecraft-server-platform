@@ -30,6 +30,7 @@ The changes below are included in the public `main` checkpoint dated 11 November
 - Added a hosted CI workflow for a disposable Paper 1.21.11 and Multiverse-Core 5.5.3 server, with verified downloads and lifecycle smoke coverage. Run `42977978430` passed create/load/unload/archive/restore and safety-guard checks; the workflow always stops the server and discards runner data.
 - Extended the disposable lifecycle workflow with import/register and malformed restore-metadata rejection/recovery checks; GitHub Actions run `42979533877` passed. Runner environment logs mask the generated bridge token.
 - Added a forced Multiverse configuration-save failure during restore and verified archive rollback, metadata preservation, and successful retry; isolated lifecycle run `42980370443` passed. The disposable runner and server data are discarded after the run.
+- Added a Chromium smoke against the authenticated dashboard and disposable Paper backend. It verifies the identity gate, creates a world through the dashboard, checks the UI/world list, then unloads and archives the test world; the runner remains ephemeral and no production world is touched.
 
 ### Changed
 

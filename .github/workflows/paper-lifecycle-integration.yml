@@ -93,6 +93,56 @@ jobs:
       - name: Exercise world lifecycle against disposable Paper
         run: python .github/scripts/paper_lifecycle_smoke.py
 
+      - name: Prepare disposable dashboard API
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'ci-browser@example.invalid' > .ci-paper/dashboard-allowlist
+          {
+            echo "MINECRAFT_DASHBOARD_ALLOWLIST_FILE=$GITHUB_WORKSPACE/.ci-paper/dashboard-allowlist"
+            echo "MINECRAFT_DASHBOARD_DIRECTORY=$GITHUB_WORKSPACE/web-dashboard"
+            echo 'MINECRAFT_DASHBOARD_ORIGIN=http://127.0.0.1:8000'
+            echo 'MINECRAFT_BRIDGE_TOKEN_FILE=/opt/minecraft-management/secrets/bridge-token'
+            echo "MINECRAFT_SERVER_PROPERTIES_FILE=$GITHUB_WORKSPACE/.ci-paper/server.properties"
+            echo "MINECRAFT_WORLD_DIRECTORY=$GITHUB_WORKSPACE/.ci-paper"
+          } >> "$GITHUB_ENV"
+
+      - name: Start disposable dashboard API
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -r management-api/requirements.txt
+          cd management-api
+          nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > ../.ci-paper/dashboard-api.log 2>&1 &
+          echo "$!" > "$GITHUB_WORKSPACE/.ci-paper/dashboard-api.pid"
+          cd "$GITHUB_WORKSPACE"
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent -H 'Tailscale-User-Login: ci-browser@example.invalid' http://127.0.0.1:8000/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat .ci-paper/dashboard-api.log
+          echo 'Disposable dashboard API did not become ready.'
+          exit 1
+
+      - name: Install Playwright Chromium
+        working-directory: .github/browser-smoke
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Verify authenticated dashboard world creation
+        working-directory: .github/browser-smoke
+        run: node smoke.mjs
+
+      - name: Stop disposable dashboard API
+        if: always()
+        run: |
+          if test -f .ci-paper/dashboard-api.pid; then
+            kill "$(cat .ci-paper/dashboard-api.pid)" 2>/dev/null || true
+          fi
+
       - name: Stop disposable Paper server
         if: always()
         run: |
@@ -103,3 +153,7 @@ jobs:
       - name: Show server log on failure
         if: failure()
         run: tail -n 250 .ci-paper/server.log
+
+      - name: Show dashboard API log on failure
+        if: failure()
+        run: tail -n 150 .ci-paper/dashboard-api.log

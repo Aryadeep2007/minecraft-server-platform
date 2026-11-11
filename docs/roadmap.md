@@ -44,11 +44,11 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 
 ### 2. Verify the authenticated browser workflow
 
-- Exercise login/session behavior and the dashboard against a safe test environment.
-- Check that rejected, canceled, and failed operations display clear outcomes.
-- Verify at least one write action only against disposable test data after the isolated environment is ready.
-- Verify an interactive write in a disposable environment. The Computer Use runtime failed to initialize, but headless Edge confirmed live read-only rendering on 11 November.
-- ASGI integration tests now cover the authenticated API write path with a mocked bridge; they do not replace a real interactive browser check or Paper lifecycle test.
+- [x] Run Chromium against the same-origin dashboard and FastAPI API attached to disposable Paper/Multiverse; the browser creates a world, verifies the result in the UI/list, then unloads and archives it.
+- [x] Confirm the isolated API rejects requests without an allowlisted identity header. CI uses a synthetic identity on the local runner; it does not test the real proxy login.
+- [ ] Verify Tailscale Serve login/session behavior and the browser UI over the private production path without submitting a production world mutation.
+- [ ] Check rejected, canceled, and failed operations in the interactive browser and confirm the dashboard displays clear outcomes.
+- ASGI tests still cover API writes through a mocked bridge; the hosted browser smoke now exercises a disposable Paper-backed write end to end.
 
 **Complete when:** browser behavior, access control, and a disposable test mutation are verified end to end.
 
