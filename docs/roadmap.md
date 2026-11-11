@@ -4,7 +4,7 @@
 
 **Published branch:** [`main`](https://github.com/Aryadeep2007/minecraft-server-platform/tree/main)
 
-**Latest verified checkpoint:** [`b6d7f43`](https://github.com/Aryadeep2007/minecraft-server-platform/commit/b6d7f43e20a3f64fcb7b4c35880c3823a7521df3); [isolated lifecycle run 42980370443 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42980370443); [CI run 42980370418 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42980370418)
+**Latest verified checkpoint:** [`1daa4ee`](https://github.com/Aryadeep2007/minecraft-server-platform/commit/1daa4ee); [isolated browser/Paper run 42988389651 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42988389651); [CI run 42988389717 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42988389717)
 
 This page is the public summary of project progress and planned milestones. It excludes private deployment identifiers, access details, credentials, and player data. The separate [project handover](PROJECT_HANDOVER.md) contains dated technical context; verify dated infrastructure observations before relying on them.
 
@@ -23,7 +23,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 | Component verification | 26 API tests, 22 dashboard tests, and 8 bridge tests passed in the published checkpoint; Windows may skip three symlink cases where symlink creation is unavailable. |
 | Deployment safety | The latest recorded deployment used a verified backup and rollback copy, followed by read only health checks. No production world lifecycle mutation is recorded. These observations are dated; check live status before operational work. |
 | Public repository foundation | Setup, security, backup/restore, troubleshooting, contributor guidance, changelog, and CI are published. The identified private IPv4 patterns were removed from reachable `main` history in an owner approved rewrite. |
-| Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for commit `b6d7f43`. |
+| Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for commit `1daa4ee`. |
 | Dashboard deployment | Deployed HTML/CSS now match the repository; JavaScript already matched. Live served-file hashes and active services were verified. Rollback copies are available. |
 | Isolated dashboard write path | ASGI tests send authenticated same-origin create/load/unload/archive/restore requests through FastAPI to a mocked bridge and verify cross-origin rejection. No Paper world is created. API suite now has 26 tests. |
 
@@ -44,9 +44,10 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 
 ### 2. Verify the authenticated browser workflow
 
-- [x] Run Chromium against the same-origin dashboard and FastAPI API attached to disposable Paper/Multiverse; create a world, verify the UI and world list, then unload/archive it. GitHub Actions run [`42987990137`](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42987990137) passed after correcting the UI success-message assertion.
+- [x] Run Chromium against the same-origin dashboard and FastAPI API attached to disposable Paper/Multiverse; create a world, verify the UI and world list, then unload/archive it. GitHub Actions run [`42988389651`](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42988389651) passed.
 - [x] Confirm the isolated API rejects requests without an allowlisted identity header. CI uses a synthetic identity on the local runner; it does not test the real proxy login.
-- [ ] Verify Tailscale Serve login/session behavior and the browser UI over the private production path without submitting a production world mutation.
+- [x] Verify the existing authenticated Chrome session loads the private dashboard and reads live API, Paper, world, and player status; no production write was submitted.
+- [ ] Verify Tailscale Serve login renewal/expiry behavior in an interactive browser.
 - [ ] Check rejected, canceled, and failed operations in the interactive browser and confirm the dashboard displays clear outcomes.
 - ASGI tests still cover API writes through a mocked bridge; the hosted browser smoke now exercises a disposable Paper-backed write end to end.
 
