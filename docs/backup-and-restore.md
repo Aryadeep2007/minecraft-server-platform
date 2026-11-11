@@ -2,6 +2,12 @@
 
 This guide uses the verified Proxmox VE 9.2 `vzdump`, `pvesm`, and `pct restore` command syntax. It describes an operator-run procedure; no restore or container cleanup is performed by reading it. Commands marked **Proxmox host** run in a root shell on the Proxmox host. Review all values before execution.
 
+## Recorded restore exercise — 11 November 2026
+
+The latest SSD backup passed `zstd -t` and was restored to a temporary CT on `local-lvm`. The CT remained stopped; its saved network interface was removed. The root filesystem was mounted read-only and contained the Debian OS marker, one `server.properties`, the Minecraft systemd unit, and four `level.dat` world files. The filesystem was unmounted and the temporary CT removed after inspection. The source backup remained present, CT100 remained running, and the restored Minecraft service was not started.
+
+This verifies archive extraction and basic file presence only. It does not prove that Minecraft boots, that every world is usable, or that a recovery will succeed after a host or storage failure.
+
 ## Create and verify a CT backup
 
 On the **Proxmox host**, first check target storage and free space:

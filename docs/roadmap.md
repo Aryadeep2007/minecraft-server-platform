@@ -4,7 +4,7 @@
 
 **Published branch:** [`main`](https://github.com/Aryadeep2007/minecraft-server-platform/tree/main)
 
-**Latest verified checkpoint:** [`1daa4ee`](https://github.com/Aryadeep2007/minecraft-server-platform/commit/1daa4ee); [isolated browser/Paper run 42988389651 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42988389651); [CI run 42988389717 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42988389717)
+**Latest verified code checkpoint:** [`b9d56f7`](https://github.com/Aryadeep2007/minecraft-server-platform/commit/b9d56f7); [isolated browser/Paper run 42989050341 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42989050341); [CI run 42989050369 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42989050369)
 
 This page is the public summary of project progress and planned milestones. It excludes private deployment identifiers, access details, credentials, and player data. The separate [project handover](PROJECT_HANDOVER.md) contains dated technical context; verify dated infrastructure observations before relying on them.
 
@@ -23,7 +23,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 | Component verification | 26 API tests, 22 dashboard tests, and 8 bridge tests passed in the published checkpoint; Windows may skip three symlink cases where symlink creation is unavailable. |
 | Deployment safety | The latest recorded deployment used a verified backup and rollback copy, followed by read only health checks. No production world lifecycle mutation is recorded. These observations are dated; check live status before operational work. |
 | Public repository foundation | Setup, security, backup/restore, troubleshooting, contributor guidance, changelog, and CI are published. The identified private IPv4 patterns were removed from reachable `main` history in an owner approved rewrite. |
-| Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for commit `1daa4ee`. |
+| Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for code checkpoint `b9d56f7`. |
 | Dashboard deployment | Deployed HTML/CSS now match the repository; JavaScript already matched. Live served-file hashes and active services were verified. Rollback copies are available. |
 | Isolated dashboard write path | ASGI tests send authenticated same-origin create/load/unload/archive/restore requests through FastAPI to a mocked bridge and verify cross-origin rejection. No Paper world is created. API suite now has 26 tests. |
 
@@ -44,7 +44,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 
 ### 2. Verify the authenticated browser workflow
 
-- [x] Run Chromium against the same-origin dashboard and FastAPI API attached to disposable Paper/Multiverse; create a world, verify the UI and world list, then unload/archive it. GitHub Actions run [`42988389651`](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42988389651) passed.
+- [x] Run Chromium against the same-origin dashboard and FastAPI API attached to disposable Paper/Multiverse; create a world, verify the UI and world list, then unload/archive it. GitHub Actions run [`42989050341`](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42989050341) passed.
 - [x] Confirm the isolated API rejects requests without an allowlisted identity header. CI uses a synthetic identity on the local runner; it does not test the real proxy login.
 - [x] Verify the existing authenticated Chrome session loads the private dashboard and reads live API, Paper, world, and player status; no production write was submitted.
 - [ ] Verify Tailscale Serve login renewal/expiry behavior in an interactive browser.
@@ -55,11 +55,12 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 
 ### 3. Prove clean installation and recovery
 
-- Follow the setup guide from a clean clone on isolated hardware with adequate resources.
-- Perform a backup restore exercise and record actual commands, expected outputs, and gaps.
-- Update setup and recovery documentation from that run.
+- [x] Clone `main` into a fresh Windows temp directory, install the API requirements, and run the API suite (26 tests; one symlink skip) and dashboard suite (22 tests). The clean clone did not have Maven installed; GitHub CI independently built and verified the Java bridge from a clean runner.
+- [x] Verify the latest SSD backup archive, restore it to a temporary stopped CT, remove its network interface, inspect its filesystem read-only, then remove the temporary CT. The source archive remained present and CT100 remained running. See the [recorded restore exercise](backup-and-restore.md).
+- [ ] Follow the full setup guide from a clean clone on isolated hardware, including service configuration and private proxy setup. A complete clean installation has not been reproduced.
+- [x] Record the restore procedure and observed limits in the backup guide.
 
-**Complete when:** a new installation and restore can be reproduced from the public instructions without relying on private notes.
+**Complete when:** a new installation and restore can both be reproduced from the public instructions without relying on private notes. Restore file recovery is verified; clean installation remains outstanding.
 
 ### 4. Add off host backup recovery
 
