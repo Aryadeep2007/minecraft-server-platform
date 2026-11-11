@@ -32,12 +32,13 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 ### 1. Verify world lifecycle in isolation
 
 - [x] Add a GitHub-hosted integration workflow that builds the bridge, verifies official Paper and pinned Multiverse artifacts, and starts a disposable Paper 1.21.11 server with Multiverse 5.5.3.
-- [ ] Get a successful first integration run and fix any compatibility or lifecycle failures it finds.
-- Cover successful create, import/register, load/unload, archive, and restore flows.
-- Cover failures and rollback behavior, including filesystem and Multiverse state consistency.
+- [x] Get a successful first integration run: GitHub Actions run `42977978430` passed with Paper 1.21.11 and Multiverse-Core 5.5.3.
+- [x] Cover successful create, load/unload, archive, and restore flows on disposable worlds.
+- [x] Cover primary-world archive rejection, missing-world load rejection, and confirmation mismatch.
+- [ ] Cover import/register and injected failure/rollback behavior, including filesystem and Multiverse state consistency.
 - Never use production worlds as fixtures. Define resource limits, cleanup, and a backup/rollback plan before using any real test server.
 
-**Complete when:** lifecycle state transitions and failure recovery are demonstrated without touching production worlds.
+**Complete when:** lifecycle state transitions, import/register, and failure recovery are demonstrated without touching production worlds.
 
 ### 2. Verify the authenticated browser workflow
 

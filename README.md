@@ -11,7 +11,7 @@ A self-hosted Minecraft administration project built around Paper, a small Java 
 | PaperManagementBridge | Java 21 Maven plugin. Provides local HTTP health, world/Multiverse listing, gamerule, and confirmed world lifecycle operations. |
 | Web dashboard | Static HTML, CSS, and JavaScript. Includes server/player controls, gamerule editing, world overview, creation, ZIP import, load/unload, and reversible archive/restore flows. Requires the management API. |
 | FastAPI management API | Tracked under `management-api/`; provides authenticated server/player/settings/world routes. Uses external secret files and environment-specific settings. |
-| Automated tests | 26 Python API tests, 22 Node dashboard tests, and 8 Java bridge validation tests; Maven verifies the bridge build. Symlink tests may skip where Windows symlink creation is unavailable. Browser login, live world mutations, and clean-room deployment are not covered. |
+| Automated tests | 26 Python API tests, 22 Node dashboard tests, and 8 Java bridge validation tests; GitHub CI also runs isolated Paper/Multiverse create/load/unload/archive/restore smoke tests on an ephemeral runner. Symlink tests may skip where Windows symlink creation is unavailable. Interactive browser login and production world mutations are not covered. |
 | Deployment documentation | Historical notes are available under `docs/`; verify environment-specific steps before use. |
 
 ## Architecture
@@ -121,7 +121,7 @@ The API's setup and required environment variables are documented in [management
 
 ## Tests and checks
 
-GitHub Actions compiles the FastAPI source, runs its unit tests and the dashboard's client-side tests, packages the Paper bridge, and runs an isolated Paper/Multiverse lifecycle job on pushes and pull requests targeting `main`. The integration job uses disposable runner storage and does not access production.
+GitHub Actions compiles the FastAPI source, runs its unit tests and the dashboard's client-side tests, packages the Paper bridge, and runs an isolated Paper/Multiverse lifecycle job on pushes and pull requests targeting `main`. The integration job uses a disposable runner and temporary world data, then stops the server and discards the runner. It does not access production.
 
 Run the API checks from `management-api/` with Python 3.12 or newer:
 
