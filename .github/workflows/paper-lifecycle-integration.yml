@@ -57,6 +57,7 @@ jobs:
           cp multiverse-core.jar .ci-paper/plugins/Multiverse-Core.jar
           cp paper-management-bridge/target/paper-management-bridge-0.1.0-SNAPSHOT.jar .ci-paper/plugins/PaperManagementBridge.jar
           token=$(openssl rand -hex 32)
+          echo "::add-mask::$token"
           printf '%s\n' "$token" | sudo tee /opt/minecraft-management/secrets/bridge-token >/dev/null
           sudo chmod 600 /opt/minecraft-management/secrets/bridge-token
           sudo chown "$(id -u):$(id -g)" /opt/minecraft-management/secrets/bridge-token

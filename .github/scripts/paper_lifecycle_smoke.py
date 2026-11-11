@@ -72,7 +72,8 @@ restored = request("/worlds/restore", confirmation(WORLD))
 assert restored.get("archived") is False and restored.get("loaded") is False, restored
 
 assert any(
-    world.get("name") == WORLD for world in request("/worlds")["worlds"]
+    world.get("name") == WORLD
+    for world in request("/multiverse/worlds")["worlds"]
 )
 request("/worlds/archive", confirmation(WORLD))
 print("Disposable Paper lifecycle passed: create, load, unload, archive, restore, guards.")
