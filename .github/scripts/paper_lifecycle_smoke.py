@@ -3,6 +3,7 @@
 import json
 import os
 import shutil
+import stat
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -110,6 +111,21 @@ metadata.write_text("{}", encoding="utf-8")
 request("/worlds/restore", confirmation(IMPORTED_WORLD), expected=409)
 assert archive_root.is_dir() and not import_folder.exists()
 metadata.write_bytes(original_metadata)
+
+# Force Multiverse's config save to fail after the restore has moved the
+# archived folder back. The bridge should roll the folder back into the
+# archive, retain metadata, and allow a later restore when writes are restored.
+worlds_config = SERVER_DIR / "plugins" / "Multiverse-Core" / "worlds.yml"
+assert worlds_config.is_file(), f"Multiverse config not found: {worlds_config}"
+original_mode = stat.S_IMODE(worlds_config.stat().st_mode)
+worlds_config.chmod(0o444)
+try:
+    request("/worlds/restore", confirmation(IMPORTED_WORLD), expected=503)
+finally:
+    worlds_config.chmod(original_mode)
+assert archive_root.is_dir() and not import_folder.exists()
+assert metadata.read_bytes() == original_metadata
+
 restored_import = request("/worlds/restore", confirmation(IMPORTED_WORLD))
 assert restored_import.get("archived") is False, restored_import
 assert import_folder.is_dir()
