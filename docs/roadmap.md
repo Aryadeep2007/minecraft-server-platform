@@ -12,7 +12,7 @@ This page is the public summary of project progress and planned milestones. It e
 
 The repository contains a Paper management bridge, a FastAPI management API, a static web dashboard, automated component tests, CI, and setup/security/operations documentation. World management includes create, import/register, load/unload, and reversible archive/restore flows. Permanent deletion is intentionally unavailable.
 
-The dashboard's three served assets now match the repository. The HTML and CSS were updated on the deployed host after checking service status, zero players, available memory, and a verified backup; timestamped rollback copies were retained. No service restart was needed. Dashboard unit tests pass, but authenticated browser behavior and a safe write action remain unverified. World mutations are not proven safe against a running Paper server. The production host must not be treated as an integration test environment without a fresh resource review, recoverable backup, and explicit test plan.
+The dashboard's three served assets now match the repository. The HTML and CSS were updated on the deployed host after checking service status, zero players, available memory, and a verified backup; timestamped rollback copies were retained. No service restart was needed. The 22 dashboard unit tests pass, and headless Edge loaded the live dashboard and world-list page over the private connection. An authenticated interactive write in a disposable environment remains unverified. World mutations are not proven safe against a running Paper server. The production host must not be treated as an integration test environment without a fresh resource review, recoverable backup, and explicit test plan.
 
 ## Completed checkpoints
 
@@ -42,7 +42,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 - Exercise login/session behavior and the dashboard against a safe test environment.
 - Check that rejected, canceled, and failed operations display clear outcomes.
 - Verify at least one write action only against disposable test data after the isolated environment is ready.
-- Repeat an interactive browser check when the Windows Computer Use runtime is available; its initialization failed during the 11 November check.
+- Verify an interactive write in a disposable environment. The Computer Use runtime failed to initialize, but headless Edge confirmed live read-only rendering on 11 November.
 
 **Complete when:** browser behavior, access control, and a disposable test mutation are verified end to end.
 
