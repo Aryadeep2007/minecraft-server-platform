@@ -60,14 +60,14 @@ jobs:
           printf '%s\n' "$token" | sudo tee /opt/minecraft-management/secrets/bridge-token >/dev/null
           sudo chmod 600 /opt/minecraft-management/secrets/bridge-token
           printf 'eula=true\n' > .ci-paper/eula.txt
-          cat > .ci-paper/server.properties <<'EOF'
-server-ip=127.0.0.1
-server-port=25565
-online-mode=false
-view-distance=3
-simulation-distance=3
-motd=Disposable CI test server
-EOF
+          printf '%s\n' \
+            'server-ip=127.0.0.1' \
+            'server-port=25565' \
+            'online-mode=false' \
+            'view-distance=3' \
+            'simulation-distance=3' \
+            'motd=Disposable CI test server' \
+            > .ci-paper/server.properties
           echo "BRIDGE_TOKEN=$token" >> "$GITHUB_ENV"
 
       - name: Start disposable Paper server
