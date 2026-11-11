@@ -5,7 +5,7 @@
 
 The current repository branch is `main`; the project status and milestones are published in the [public project roadmap](roadmap.md). The history rewrite was approved by the owner, the worktree was clean after publication, and GitHub Actions CI passed for the published documentation checkpoint. See the roadmap for the latest checkpoint and CI run.
 
-The repository includes the sanitized management API, Paper bridge, dashboard, documentation, and automated checks. The deployed platform's health and world lists were checked read only; no world lifecycle mutation has been verified against a safe test server. Isolated lifecycle testing, authenticated browser workflow validation, and a clean room install remain open. No private hostnames, addresses, credentials, or player identifiers belong in this handover.
+The repository includes the sanitized management API, Paper bridge, dashboard, documentation, and automated checks. On 11 November the deployed dashboard HTML/CSS were reconciled with the repository; live served-file hashes match, services remain active, and timestamped rollback copies were retained. The 22 mocked dashboard tests pass. Interactive browser login and a safe write action remain unverified because no isolated test environment is ready and the Windows browser automation runtime failed to initialize. No world lifecycle mutation has been verified against a safe test server. No private hostnames, addresses, credentials, or player identifiers belong in this handover.
 
 The detailed 11 November notes below were written before the publication checkpoint and are historical where they conflict with the current checkpoint. Older dated sections are historical records, not current infrastructure status.
 

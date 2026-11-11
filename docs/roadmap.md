@@ -12,7 +12,7 @@ This page is the public summary of project progress and planned milestones. It e
 
 The repository contains a Paper management bridge, a FastAPI management API, a static web dashboard, automated component tests, CI, and setup/security/operations documentation. World management includes create, import/register, load/unload, and reversible archive/restore flows. Permanent deletion is intentionally unavailable.
 
-The deployed services have passed read only health and world list checks. Automated tests and CI validate individual components, but do not prove that world mutations work safely against a running Paper server. The current server must not be treated as an integration test environment without a fresh resource review, recoverable backup, and explicit test plan.
+The dashboard's three served assets now match the repository. The HTML and CSS were updated on the deployed host after checking service status, zero players, available memory, and a verified backup; timestamped rollback copies were retained. No service restart was needed. Dashboard unit tests pass, but authenticated browser behavior and a safe write action remain unverified. World mutations are not proven safe against a running Paper server. The production host must not be treated as an integration test environment without a fresh resource review, recoverable backup, and explicit test plan.
 
 ## Completed checkpoints
 
@@ -24,6 +24,7 @@ The deployed services have passed read only health and world list checks. Automa
 | Deployment safety | The latest recorded deployment used a verified backup and rollback copy, followed by read only health checks. No production world lifecycle mutation is recorded. These observations are dated; check live status before operational work. |
 | Public repository foundation | Setup, security, backup/restore, troubleshooting, contributor guidance, changelog, and CI are published. The identified private IPv4 patterns were removed from reachable `main` history in an owner approved rewrite. |
 | Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for commit `6360b09`. |
+| Dashboard deployment | Deployed HTML/CSS now match the repository; JavaScript already matched. Live served-file hashes and active services were verified. Rollback copies are available. |
 
 ## Next milestones
 
@@ -41,6 +42,7 @@ The deployed services have passed read only health and world list checks. Automa
 - Exercise login/session behavior and the dashboard against a safe test environment.
 - Check that rejected, canceled, and failed operations display clear outcomes.
 - Verify at least one write action only against disposable test data after the isolated environment is ready.
+- Repeat an interactive browser check when the Windows Computer Use runtime is available; its initialization failed during the 11 November check.
 
 **Complete when:** browser behavior, access control, and a disposable test mutation are verified end to end.
 
