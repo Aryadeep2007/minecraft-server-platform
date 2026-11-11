@@ -37,7 +37,7 @@ try {
   await page.getByRole("button", { name: "Create world" }).click();
 
   const result = page.locator("#world-create-message");
-  await result.getByText(`${worldName} created and loaded.`, { exact: true }).waitFor({ timeout: 190000 });
+  await result.getByText(`World ${worldName} created and loaded.`, { exact: true }).waitFor({ timeout: 190000 });
   await page.locator("#worlds-list").getByText(worldName, { exact: false }).waitFor({ timeout: 15000 });
 
   const listing = await api.get("/worlds/multiverse");

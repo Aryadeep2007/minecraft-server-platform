@@ -8,6 +8,7 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+node_modules/
 
 # Java and Maven
 **/target/

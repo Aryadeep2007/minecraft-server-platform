@@ -65,11 +65,18 @@ jobs:
           printf '%s\n' \
             'server-ip=127.0.0.1' \
             'server-port=25565' \
+            'management-server-enabled=true' \
+            'management-server-host=127.0.0.1' \
+            'management-server-port=25585' \
+            'management-server-tls-enabled=false' \
             'online-mode=false' \
             'view-distance=3' \
             'simulation-distance=3' \
             'motd=Disposable CI test server' \
             > .ci-paper/server.properties
+          management_secret=$(openssl rand -hex 20)
+          echo "::add-mask::$management_secret"
+          printf 'management-server-secret=%s\n' "$management_secret" >> .ci-paper/server.properties
           echo "BRIDGE_TOKEN=$token" >> "$GITHUB_ENV"
 
       - name: Start disposable Paper server
