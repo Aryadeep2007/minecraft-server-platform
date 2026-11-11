@@ -59,6 +59,7 @@ jobs:
           token=$(openssl rand -hex 32)
           printf '%s\n' "$token" | sudo tee /opt/minecraft-management/secrets/bridge-token >/dev/null
           sudo chmod 600 /opt/minecraft-management/secrets/bridge-token
+          sudo chown "$(id -u):$(id -g)" /opt/minecraft-management/secrets/bridge-token
           printf 'eula=true\n' > .ci-paper/eula.txt
           printf '%s\n' \
             'server-ip=127.0.0.1' \
