@@ -1,0 +1,43 @@
+# Local-only project memory and infrastructure inventory. Never publish these.
+/PROJECT_ROADMAP.md
+/docs/private-infrastructure.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Java and Maven
+**/target/
+
+# Local secrets and environment configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.p7b
+*.jks
+*.keystore
+*.ppk
+*.token
+*.secret
+id_rsa
+id_ed25519
+id_ecdsa
+id_dsa
+authorized_keys
+known_hosts
+/secrets/
+/credentials/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+/PROJECT_ROADMAP.md

@@ -497,6 +497,163 @@ h1 {
     padding: 3px 21px;
 }
 
+.world-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(130px, 0.55fr);
+    gap: 9px;
+    padding: 14px 21px 4px;
+}
+
+.world-create {
+    margin: 12px 0;
+    border: 1px solid #2c394d;
+    border-radius: 10px;
+    background: #111b29;
+}
+
+.world-create > summary {
+    padding: 12px 14px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.world-create-form {
+    display: grid;
+    gap: 9px;
+    padding: 0 14px 14px;
+}
+
+.world-create-form > label,
+.world-create-options label {
+    color: #aab7c9;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.world-create-form input[type="text"],
+.world-create-options select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 38px;
+    padding: 0 10px;
+    border: 1px solid #354359;
+    border-radius: 8px;
+    background: #101823;
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+}
+
+.world-create-form input:focus-visible,
+.world-create-options select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.world-create-form input[type="file"] {
+    width: 100%;
+    color: #aab7c9;
+    font: inherit;
+    font-size: 11px;
+}
+
+.world-create-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.world-create-options label {
+    display: grid;
+    gap: 6px;
+}
+
+.world-create-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.world-create-checkbox input {
+    accent-color: var(--accent);
+}
+
+.world-create-warning,
+.world-create-message {
+    margin: 0;
+    color: #aab7c9;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.world-create-message:not(:empty) {
+    padding: 0 14px 12px;
+}
+
+.world-create-message.error {
+    color: #ff9b9b;
+}
+
+.world-register-form {
+    margin: 0 14px 14px;
+    padding: 12px 0 0;
+    border-top: 1px solid #2c394d;
+}
+
+.world-summary {
+    padding: 2px 21px 0;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.world-refresh-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px 21px 0;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.world-tools input,
+.world-tools select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    padding: 0 11px;
+    border: 1px solid #354359;
+    border-radius: 9px;
+    background: #101823;
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+}
+
+.world-tools input:focus-visible,
+.world-tools select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+    .world-tools {
+        grid-template-columns: 1fr;
+    }
+}
+
 .world-row {
     display: flex;
     min-height: 76px;
@@ -505,8 +662,73 @@ h1 {
     border-bottom: 1px solid #202b3a;
 }
 
+.world-copy {
+    min-width: 0;
+    flex: 1 1 120px;
+}
+
 .world-row:last-child {
     border-bottom: 0;
+}
+
+.world-manage-button {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid #354359;
+    border-radius: 8px;
+    background: #182231;
+    color: #d9e4f3;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.world-manage-button:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.world-manage-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.world-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.world-action-button {
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid #354359;
+    border-radius: 8px;
+    background: #182231;
+    color: #d9e4f3;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.world-action-button:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.world-action-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.world-action-button:disabled {
+    cursor: wait;
+    opacity: 0.65;
 }
 
 .world-icon {
@@ -857,7 +1079,13 @@ h1 {
     }
 
     .world-row {
+        flex-wrap: wrap;
         gap: 10px;
+    }
+
+    .world-actions {
+        width: 100%;
+        padding-left: 44px;
     }
 
     .world-icon {

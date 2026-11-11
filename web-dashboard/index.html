@@ -117,6 +117,106 @@
                         </div>
                         <span class="panel-tag" id="worlds-tag">Loading</span>
                     </div>
+                    <div class="world-tools">
+                        <label class="sr-only" for="world-search">Search worlds</label>
+                        <input id="world-search" type="search" placeholder="Search worlds" autocomplete="off">
+                        <label class="sr-only" for="world-state-filter">Filter by load state</label>
+                        <select id="world-state-filter">
+                            <option value="all">All states</option>
+                            <option value="loaded">Loaded</option>
+                            <option value="unloaded">Unloaded</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </div>
+                    <div class="world-summary" id="world-summary" aria-live="polite">
+                        World load status is unavailable.
+                    </div>
+                    <div class="world-refresh-row">
+                        <button class="button button-secondary" id="refresh-worlds-button" type="button">
+                            Refresh worlds
+                        </button>
+                    </div>
+                    <details class="world-create">
+                        <summary>Create a world</summary>
+                        <form id="world-create-form" class="world-create-form">
+                            <label for="world-create-name">World name</label>
+                            <input id="world-create-name" name="name" type="text" maxlength="32"
+                                pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,31}" autocomplete="off" required>
+                            <div class="world-create-options">
+                                <label>Environment
+                                    <select name="environment">
+                                        <option value="NORMAL">Overworld</option>
+                                        <option value="NETHER">Nether</option>
+                                        <option value="THE_END">The End</option>
+                                    </select>
+                                </label>
+                                <label>World type
+                                    <select name="world_type">
+                                        <option value="NORMAL">Normal</option>
+                                        <option value="FLAT">Flat</option>
+                                        <option value="LARGE_BIOMES">Large biomes</option>
+                                        <option value="AMPLIFIED">Amplified</option>
+                                    </select>
+                                </label>
+                                <label>Game mode
+                                    <select name="game_mode">
+                                        <option value="SURVIVAL">Survival</option>
+                                        <option value="CREATIVE">Creative</option>
+                                        <option value="ADVENTURE">Adventure</option>
+                                        <option value="SPECTATOR">Spectator</option>
+                                    </select>
+                                </label>
+                                <label>Difficulty
+                                    <select name="difficulty">
+                                        <option value="NORMAL">Normal</option>
+                                        <option value="PEACEFUL">Peaceful</option>
+                                        <option value="EASY">Easy</option>
+                                        <option value="HARD">Hard</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <label class="world-create-checkbox">
+                                <input name="generate_structures" type="checkbox" checked>
+                                Generate structures
+                            </label>
+                            <p class="world-create-warning">World generation may take time and use server memory and disk. You will be asked to confirm the world name before creation.</p>
+                            <button class="button" type="submit">Create world</button>
+                        </form>
+                        <div id="world-create-message" class="world-create-message" role="status" aria-live="polite"></div>
+                    </details>
+                    <details class="world-create world-import">
+                        <summary>Import a world ZIP</summary>
+                        <form id="world-import-form" class="world-create-form">
+                            <label for="world-import-name">World name</label>
+                            <input id="world-import-name" name="name" type="text" maxlength="32"
+                                pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,31}" autocomplete="off" required>
+                            <label for="world-import-file">Minecraft world ZIP (max 256 MiB)</label>
+                            <input id="world-import-file" name="archive" type="file" accept=".zip,application/zip" required>
+                            <label>Environment
+                                <select name="environment">
+                                    <option value="NORMAL">Overworld</option>
+                                    <option value="NETHER">Nether</option>
+                                    <option value="THE_END">The End</option>
+                                </select>
+                            </label>
+                            <p class="world-create-warning">The archive must contain one world with level.dat. Existing world folders are never overwritten. Unsafe paths, links, duplicate entries, oversized archives, and insufficient disk space are rejected.</p>
+                            <button class="button" type="submit">Import world</button>
+                        </form>
+                        <div id="world-import-message" class="world-create-message" role="status" aria-live="polite"></div>
+                        <form id="world-register-form" class="world-create-form world-register-form">
+                            <label for="world-register-name">Retry registration of an existing folder</label>
+                            <input id="world-register-name" name="name" type="text" maxlength="32"
+                                pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,31}" autocomplete="off" required>
+                            <label>Environment
+                                <select name="environment">
+                                    <option value="NORMAL">Overworld</option>
+                                    <option value="NETHER">Nether</option>
+                                    <option value="THE_END">The End</option>
+                                </select>
+                            </label>
+                            <button class="button button-secondary" type="submit">Register existing world</button>
+                        </form>
+                    </details>
                     <div class="world-list" id="worlds-list" aria-live="polite">
                         <div class="loading-state">Loading world information...</div>
                     </div>
@@ -148,8 +248,8 @@
                         </div>
                     </div>
                     <div class="notice">
-                        <strong>Read-only preview</strong>
-                        <p>This first dashboard screen displays status and world information. Administrative actions are not enabled here.</p>
+                        <strong>World action safeguards</strong>
+                        <p>Load, unload, and create actions ask you to confirm the exact world name. The server protects its primary world and refuses to unload a world with players inside.</p>
                     </div>
                 </article>
             </section>

@@ -1,315 +1,94 @@
-\# Proxmox VE
+# Proxmox deployment and storage notes
 
+This page describes the owner’s Proxmox host as verified on 10 November 2026. It is operational context, not a clean-room installation guide. Use your own host addresses and device identities; the private inventory is intentionally omitted.
 
+## Host and container snapshot
 
-\## Proxmox Host
-
-
-
-| Item | Value |
-
+| Component | Verified/recorded state |
 |---|---|
+| Proxmox VE | 9.2.11, Debian 13 Trixie |
+| Host hardware | Intel Core i3-9100F, 4 GiB RAM |
+| System/data disk | Toshiba HDWD110, about 1 TB SATA |
+| Minecraft container | CT100, hostname `minecraft`, Debian 13 |
+| CT100 resources | 2 cores, 2 GiB RAM, 40 GiB root disk |
+| CT100 state at last check | Running |
 
-| Proxmox VE | 9.2.11 |
+The host has limited memory. Measure current host and guest memory/swap before adding services or increasing allocations.
 
-| Hostname | pve |
+## Storage layout
 
-| IP Address | [private-ip-redacted] |
+The Toshiba HDD continues to host the Proxmox installation and original LVM storage:
 
-| Gateway | [private-ip-redacted] |
+- EFI partition about 1 GiB.
+- Proxmox root logical volume 96 GiB.
+- Swap logical volume 4 GiB.
+- LVM thin pool about 797.7 GiB.
+- CT100 root disk on `local-lvm`.
 
-| Bridge | vmbr0 |
+The separate EVM25/256GB SATA SSD is formatted ext4 and mounted by UUID at `/mnt/pve/ssd-backups`. Proxmox storage ID `ssd-backups` is active and configured for backup content only. Exact serials and filesystem UUIDs are kept in local private inventory, not in public docs.
 
-| Physical NIC | nic0 |
+Do not identify a disk by `/dev/sdX` alone. Device names can change between boots. Confirm model, serial, capacity, and `/dev/disk/by-id/` before storage operations.
 
-| OS Base | Debian 13 (Trixie) |
+## CT100 backup configuration
 
-| Architecture | x86-64 |
+The enabled Proxmox backup job for CT100 was verified on 10 November 2026 with:
 
+| Setting | Value |
+|---|---|
+| Destination | `ssd-backups` |
+| Schedule | Daily at 02:00 (host timezone) |
+| Mode | Snapshot |
+| Compression | Zstandard |
+| Retention | Keep last 3, daily 7, weekly 4, monthly 3 |
 
+A manual snapshot backup was created on 10 November 2026. The archive completed successfully and `zstd -t` completed without error. The SSD had roughly 221 GiB free afterward. Verify the live job and free space before relying on these values.
 
-\## Storage
+An isolated restore to temporary CT101 verified archive extraction and presence of core Minecraft files/world directories. CT101 was kept stopped and network-disconnected, then deleted after owner approval. CT100 remains the only container in this setup. The restore test did not start Minecraft or prove gameplay operation.
 
+The SSD is inside the same host. It protects against a single-disk failure only when the other disk remains healthy; it does not protect against whole-host loss. Maintain an off-machine backup copy and test restoration.
 
+## Read-only inspection commands
 
-The Proxmox host currently uses a 1 TB SATA HDD.
-
-
-
-The main storage layout is:
-
-
-
-\- EFI partition: \~1 GB
-
-\- Root LV: 96 GB
-
-\- Swap: 4 GB
-
-\- LVM thin pool: \~797.7 GB
-
-\- Free VG space: \~16 GB
-
-
-
-The storage is currently sufficient for the initial Minecraft deployment.
-
-
-
-\## Network
-
-
-
-The Proxmox bridge `vmbr0` provides network connectivity to the host and LXC containers.
-
-
-
-The host uses:
-
-
-
-\- IP: `[private-ip-redacted]/24`
-
-\- Gateway: `[private-ip-redacted]`
-
-\- DNS: `[private-ip-redacted]`
-
-
-
-\## Minecraft Container
-
-
-
-Minecraft runs inside:
-
-
-
-\- Container ID: `100`
-
-\- Hostname: `minecraft`
-
-\- OS: Debian Trixie
-
-\- RAM: 2048 MB
-
-\- CPU: 2 cores
-
-\- Network: `vmbr0`
-
-\- IP: `[private-ip-redacted]/24`
-
-
-
-\## Repositories
-
-
-
-Enabled repositories:
-
-
-
-\- Debian Trixie
-
-\- Debian Trixie Updates
-
-\- Debian Security
-
-\- Proxmox `pve-no-subscription`
-
-
-
-The Proxmox enterprise repository is disabled because this server does not use a Proxmox subscription.
-
-
-
-\## Power Recovery
-
-
-
-The motherboard BIOS is configured with:
-
-
-
-`AC BACK = Always On`
-
-
-
-This allows the server to automatically power back on after an electrical outage, provided mains power is restored.
-
-
-
-\## Security
-
-
-
-Proxmox Web UI is available on port `8006`.
-
-
-
-SSH is available on port `22`.
-
-
-
-These management services should remain accessible only from the trusted LAN and should not be exposed directly to the public Internet.
-
-
-## Container Firewall
-
-The Minecraft container has the Proxmox firewall enabled.
-
-Allowed inbound traffic from the trusted LAN (`[private-ip-redacted]/24`):
-
-- SSH: TCP `22`
-- Minecraft: TCP `25565`
-- ICMP/ping
-
-Inbound traffic not explicitly allowed is dropped.
-
-The Minecraft RCON port (`25575`) is not exposed through the firewall.
-
-## Automatic Startup
-
-Minecraft container `100` is configured to start automatically when Proxmox boots.
-
-Configuration:
-
-- `onboot: 1`
-- `startup: order=1,up=30`
-
-The Minecraft systemd service is also enabled:
-
-`minecraft.service`
-
-## Reboot Recovery Test
-
-A complete reboot test was performed successfully:
-
-1. Proxmox host rebooted.
-2. LXC container `100` started automatically.
-3. `minecraft.service` started automatically.
-4. Minecraft port `25565` became reachable.
-5. A Minecraft client successfully connected to the server.
-
-
-## Backup System
-
-The Minecraft LXC (CT 100) is protected by an automated Proxmox backup system.
-
-### Manual Backup
-
-A full LXC backup was successfully created using Proxmox `vzdump`:
+Run these on the **Proxmox host**. These commands inspect state only:
 
 ```bash
-vzdump 100 --storage local --mode snapshot --compress zstd
+lsblk -e7 -o NAME,SIZE,MODEL,SERIAL,TRAN,FSTYPE,UUID,MOUNTPOINTS
+ls -l /dev/disk/by-id/
+pvs -o pv_name,pv_size,pv_free,vg_name
+vgs -o vg_name,vg_size,vg_free
+lvs -a -o lv_name,vg_name,lv_size,segtype,devices
+pvesm status
+pct status 100
+pvesm list ssd-backups --content backup
 ```
 
-Backup storage:
+Before any storage writes, review the exact target disk, impact, backup and rollback plan. Formatting, partitioning, LVM changes, storage edits, and migration require explicit approval.
 
-```text
-/var/lib/vz/dump/
-```
+## CT100 administration
 
-The verified backup created during testing was approximately 682 MB.
-
-The backup archive was integrity-tested successfully with:
+Run Proxmox container commands on the **Proxmox host**:
 
 ```bash
-zstd -t /var/lib/vz/dump/vzdump-lxc-100-2026_09_10-23_10_41.tar.zst
+pct status 100
+pct config 100
+pct exec 100 -- systemctl is-active minecraft.service
 ```
 
-### Automatic Backup Schedule
+Do not change CT network, memory, disk, boot, or service configuration based only on this historical document. Confirm the live config and take a fresh backup before consequential maintenance.
 
-An automatic Proxmox backup job is configured for Minecraft CT 100.
+## Security and network
 
-| Setting     | Value          |
-| ----------- | -------------- |
-| Backup type | LXC (`vzdump`) |
-| Container   | CT 100         |
-| Node        | pve            |
-| Storage     | local          |
-| Mode        | snapshot       |
-| Compression | zstd           |
-| Schedule    | 02:00 daily    |
-| Enabled     | Yes            |
+The actual management address, gateway, DHCP range, MAC addresses, SSH targets, and remote-access identities are intentionally omitted. Keep Proxmox management restricted to trusted administration paths. Do not expose the Proxmox web UI, SSH, or Paper bridge directly to the public internet.
 
-The configured retention policy is:
+The Minecraft service has historically used Java TCP 25565 and Bedrock/Geyser UDP 19132, with private/tunnel access varying by deployment. Verify firewall and authentication configuration before exposing player endpoints.
 
-| Retention    | Count |
-| ------------ | ----: |
-| Keep last    |     3 |
-| Keep daily   |     7 |
-| Keep weekly  |     4 |
-| Keep monthly |     3 |
+## Power and startup
 
-The backup job is managed by Proxmox and was verified through the Proxmox API.
+Historical notes record CT100 configured to start on host boot and `minecraft.service` enabled inside the container. The Proxmox host booted successfully during the 10 November SSD checks, and CT100 was running afterward. Treat detailed BIOS/network settings as environment-specific and verify them live.
 
-### Backup Retention Verification
+## Related docs
 
-The configured retention policy was tested using a dry run:
-
-```bash
-pvesm prune-backups local --vmid 100 --type lxc --keep-last 3 --keep-daily 7 --keep-weekly 4 --keep-monthly 3 --dry-run 1
-```
-
-The existing backup was correctly marked to be kept.
-
-### Backup Strategy
-
-The backup system provides protection against accidental configuration changes, server failures, and future maintenance operations.
-
-Before major Minecraft/Paper upgrades or other potentially destructive changes, a fresh backup should be created and its integrity verified.
-
-> **Note:** The current backup storage is located on the same physical HDD as the Proxmox installation. This protects against software/configuration problems but does not protect against physical disk failure. An external or separate backup destination should be added in the future.
-
-## Network Topology and Internet Exposure
-
-The Proxmox host and Minecraft LXC are running behind the PG's shared network.
-
-- Proxmox host: `[private-ip-redacted]/24`
-- Minecraft LXC (CT 100): `[private-ip-redacted]/24`
-- Local gateway/router: `[private-ip-redacted]`
-- PG upstream router: TP-Link Archer C60 V3.80 at `[private-ip-redacted]`
-- Archer C60 WAN address: `[private-ip-redacted]52`
-- Observed public IPv4: `202.142.69.29`
-
-Network path:
-
-Internet
-  ↓
-PG upstream router `[private-ip-redacted]`
-  ↓
-Local router `[private-ip-redacted]`
-  ↓
-Proxmox `[private-ip-redacted]`
-  ↓
-Minecraft CT 100 `[private-ip-redacted]:25565`
-
-LAN Minecraft connectivity was verified successfully from the Windows PC using `Test-NetConnection [private-ip-redacted] -Port 25565`.
-
-The Minecraft service listens on `*:25565` inside CT 100.
-
-CT 100 firewall policy:
-- Incoming policy: `DROP`
-- Outgoing policy: `ACCEPT`
-- LAN TCP 22 allowed
-- LAN TCP 25565 allowed
-- ICMP allowed
-
-The upstream Archer C60 is PG-owned and its administrator password is unavailable. It must not be factory-reset or modified without authorization.
-
-Direct Internet port forwarding is therefore not currently configured. Remote Minecraft access, if needed later, should use a solution that does not require modifying the shared PG router.
-
-## Verified Tailscale Backup Checkpoint
-
-A new verified backup was created after completing and testing Tailscale remote access.
-
-- CT: `100` (`minecraft`)
-- Backup mode: `snapshot`
-- Backup archive: `vzdump-lxc-100-2026_09_11-21_39_28.tar.zst`
-- Archive size: approximately `765 MB`
-- Backup status: successful
-- Integrity check: passed using `zstd -t`
-
-This checkpoint preserves the Minecraft server state after Tailscale was configured, authenticated, verified over TCP 25565, and tested successfully after a CT reboot.
-
-The backup is stored on the local Proxmox storage and therefore protects against configuration/software problems but not physical failure of the Proxmox HDD.
+- [CT backup and isolated restore guide](backup-and-restore.md)
+- [Minecraft deployment notes](minecraft-server.md)
+- [Hardware and SSD role](hardware.md)
+- [Management API and Paper bridge](management-api.md)

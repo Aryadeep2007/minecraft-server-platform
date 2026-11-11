@@ -1,199 +1,91 @@
-# Minecraft Management API and Paper Bridge
+# Management API and Paper bridge
 
-## Purpose
+This page documents the checked-in FastAPI source, Java bridge, and current verification boundary. The live service configuration, access identity list, and bearer/Management Protocol secrets remain outside Git. See the [API setup guide](../management-api/README.md), [integrated getting-started guide](getting-started.md), and [world-management guide](world-management.md).
 
-The Minecraft Management API is the shared backend planned for the web dashboard and Discord bot. It is implemented with FastAPI and provides endpoints for Minecraft server control, player administration, settings, and world management.
-
-The custom PaperManagementBridge plugin provides a local HTTP bridge to Paper/Bukkit operations, including per-world gamerule management.
+For service/API failures, see the [troubleshooting guide](troubleshooting.md).
 
 ## Architecture
 
-~~~text
-Future Web Dashboard / Discord Bot
-                |
-                v
-Minecraft Management API (FastAPI/Uvicorn)
-                |
-                v
-Bridge service in the API
-                |
-                v
-PaperManagementBridge plugin
-                |
-                v
-Paper/Bukkit API
-                |
-                v
-Minecraft worlds and settings
-~~~
+```mermaid
+flowchart LR
+    Browser[Authenticated dashboard] -->|same-origin HTTP| API[FastAPI management API]
+    API -->|loopback HTTP + bearer token| Bridge[PaperManagementBridge]
+    Bridge -->|Paper API| Paper[Paper server and worlds]
+    MV[Multiverse-Core] -. world registration and metadata .-> Bridge
+```
 
-The services run inside Proxmox LXC container 100 (`minecraft`).
+The browser calls FastAPI; it never receives the bridge token. The bridge listens only on loopback at port `25586`. The API reads the bridge token and Paper Management Protocol secret from external files.
 
-| Component | Location |
-|---|---|
-| Management API | `/opt/minecraft-management` |
-| Python environment | `/opt/minecraft-management/.venv` |
-| API service | `minecraft-management.service` |
-| Minecraft server directory | `/opt/minecraft` |
-| Bridge plugin JAR | `/opt/minecraft/plugins/PaperManagementBridge.jar` |
-| API loopback address | `127.0.0.1:8000` |
-| Bridge loopback address | `127.0.0.1:25586` |
+## Bridge routes
 
-## Security
+The bridge requires `Authorization: Bearer <token>` on every request, including health and read-only routes. It binds to `127.0.0.1`.
 
-- The API and bridge are intended to remain accessible only through loopback addresses inside the Minecraft container.
-- The bridge reads its bearer-token credential from `/opt/minecraft-management/secrets/bridge-token`.
-- The token value must never be committed to Git or copied into documentation.
-- Bridge requests use an `Authorization: Bearer ...` header. The bridge compares supplied token bytes using `MessageDigest.isEqual`.
-- Minecraft RCON remains disabled.
-- Do not bind management services to `0.0.0.0`, add router port forwarding, or expose management ports to the public internet.
-- Before connecting a browser dashboard or remote client, ensure there is an appropriate authentication and authorization layer. Keep management access private.
-
-## Implemented API endpoints
-
-The routes below are registered in `app/main.py`. Their presence does not mean every endpoint has been tested end to end.
-
-### Health
-
-| Method | Endpoint | Purpose |
+| Method | Path | Behavior and safeguards |
 |---|---|---|
-| GET | `/` | API identity and version |
-| GET | `/health` | API health |
-| GET | `/bridge/health` | Bridge health |
+| GET | `/health` | Authenticated bridge health. |
+| GET | `/worlds` | Loaded Paper worlds with environment and online player counts. |
+| GET | `/multiverse/worlds` | Registered Multiverse worlds, aliases, environment, loaded state, and archive state. |
+| GET | `/worlds/gamerules?world=<name>` | Reads supported typed gamerules for a loaded world. |
+| PUT | `/worlds/gamerules` | Changes a supported boolean or integer gamerule on the Paper thread. |
+| POST | `/worlds/load` | Loads an existing registered world. Requires exact name confirmation. |
+| POST | `/worlds/unload` | Saves and unloads a non-primary world with no players. |
+| POST | `/worlds/create` | Creates a world using validated environment, type, mode, difficulty, and structure settings. |
+| POST | `/worlds/import` | Registers a validated world directory with Multiverse; the API first extracts ZIP uploads safely. |
+| POST | `/worlds/archive` | Saves/unloads a non-primary, empty world and moves its directory into `.management-world-trash`. Multiverse autoload is disabled and saved. |
+| POST | `/worlds/restore` | Returns an archived directory and restores its prior Multiverse autoload setting. The world stays unloaded. |
 
-### Server lifecycle
+Lifecycle names use one path-safe segment (ASCII letters, digits, dot, underscore, hyphen; up to 32 characters). State-changing calls require exact typed-name confirmation. The bridge refuses the primary world and worlds with players for unload/archive. There is no arbitrary shell execution or client-provided filesystem path.
 
-| Method | Endpoint | Purpose |
+## FastAPI routes
+
+The API checks `Tailscale-User-Login` against an external allowlist on every request. For `POST`, `PUT`, `PATCH`, and `DELETE`, it also requires the `Origin` header to exactly match `MINECRAFT_DASHBOARD_ORIGIN`. Keep the API behind the trusted access proxy that supplies the identity header; direct clients must not be able to spoof that header.
+
+Relevant world routes:
+
+| Method | API path | Notes |
 |---|---|---|
-| GET | `/server/status` | Read Minecraft status |
-| POST | `/server/start` | Start Minecraft |
-| POST | `/server/stop` | Stop Minecraft |
-| POST | `/server/restart` | Restart Minecraft |
+| GET | `/bridge/health`, `/worlds`, `/worlds/multiverse` | Read-only health and world listings. |
+| GET/PUT | `/worlds/gamerules` | Reads/updates typed rules for a loaded world. |
+| POST | `/worlds/load`, `/worlds/unload`, `/worlds/create` | Validates names/settings and forwards narrow requests to the bridge. |
+| POST | `/worlds/import` | Raw `application/zip` body, up to 256 MiB. Headers carry world name, exact confirmation, and environment. |
+| POST | `/worlds/register` | Registers an existing world folder after an import/registration failure; requires a regular `level.dat` and rejects symlinks. |
+| POST | `/worlds/archive`, `/worlds/restore` | Exact confirmation; reversible same-filesystem move, never permanent deletion. |
 
-### Players and access control
+ZIP import rejects absolute/traversal paths, symlinks and special files, encrypted entries, duplicate paths, excessive compression ratios, more than 100,000 entries, expansion above 8 GiB, invalid world layout, and insufficient free space. It never intentionally overwrites an existing world. If extraction succeeds but Multiverse registration fails, the files are retained and `/worlds/register` can retry registration.
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/player/list` | List players |
-| GET / POST / DELETE | `/player/whitelist` | Read, add, or remove whitelist entries |
-| GET / POST / DELETE | `/player/operators` | List, add, or remove operators |
-| POST | `/player/kick` | Kick a player |
-| GET / POST / DELETE | `/player/bans` | List, add, or remove player bans |
-| GET / POST / DELETE | `/player/ip-bans` | List, add, or remove IP bans |
+## Security limits and operational behavior
 
-### Server settings
+- Keep bridge port `25586` loopback-only; do not publish the token or expose the bridge.
+- Use an access proxy that authenticates users, overwrites identity headers, and blocks direct access to the API.
+- Preserve the dashboard origin and allowlist in private service configuration. Example settings fail closed for writes.
+- Archive/restore is not a backup: it is on the same filesystem and does not protect against CT, disk, or host loss.
+- Permanent world deletion is not implemented. Do not add it until off-host recovery and restore are verified.
+- Treat create/import as resource-intensive. The server host has limited memory; check free disk and memory before use.
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET / PUT | `/server/settings/difficulty` | Read or update difficulty |
-| GET / PUT | `/server/settings/game-mode` | Read or update server game mode |
-| GET / PUT | `/server/settings/enforce-allowlist` | Read or update allowlist enforcement |
-| GET / PUT | `/server/settings/use-allowlist` | Read or update allowlist usage |
-| GET / PUT | `/server/settings/autosave` | Read or update autosave |
-| GET / PUT | `/server/gamerules` | Read or update server-wide gamerules |
+## Build and test
 
-### Worlds
+From the repository root, build the Paper plugin on a development machine with JDK 21 and Maven:
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/worlds` | List worlds |
-| GET | `/worlds/multiverse` | Read Multiverse world information |
-| GET | `/worlds/gamerules?world=<world>` | Read gamerules for a specific world |
-| PUT | `/worlds/gamerules` | Update a gamerule in a specific world |
+```powershell
+cd paper-management-bridge
+mvn --batch-mode --no-transfer-progress clean verify
+```
 
-## Per-world gamerule API
+Run API checks from `management-api/` with Python 3.12 or newer:
 
-The per-world endpoints are separate from `/server/gamerules`. The bridge executes Bukkit world operations on the Minecraft server thread.
+```powershell
+python -m compileall -q app
+python -m unittest discover -s tests -v
+```
 
-### Read gamerules
+Run dashboard tests from `web-dashboard/` with Node.js 22:
 
-Request:
+```powershell
+node --test tests/*.test.cjs
+```
 
-~~~http
-GET /worlds/gamerules?world=creative
-~~~
+Current local verification: 23 API tests (one Windows symlink limitation skip), 22 dashboard tests, and 8 Java bridge validation tests pass; Maven `clean verify` succeeds. Two Java symlink tests may skip on Windows. The earlier 17-test API suite also passed on CT100's Linux runtime, including its symlink check. A live request to load a confirmed, uppercase, unregistered probe name was rejected with HTTP 404 before any world action. This does not prove successful world mutations on Paper. On 10 November 2026, API health, bridge health, world list, Multiverse list, and dashboard requests returned HTTP 200 after deployment.
 
-Example response structure:
+## Deployment status and limitations
 
-~~~json
-{
-  "world": "creative",
-  "gamerules": [
-    {
-      "key": "keep_inventory",
-      "type": "boolean",
-      "value": true
-    },
-    {
-      "key": "random_tick_speed",
-      "type": "integer",
-      "value": 3
-    }
-  ]
-}
-~~~
-
-The actual response contains the gamerules available in the requested world. Values are returned as typed JSON Booleans or integers.
-
-### Update a gamerule
-
-Request:
-
-~~~http
-PUT /worlds/gamerules
-Content-Type: application/json
-~~~
-
-Body:
-
-~~~json
-{
-  "world": "creative",
-  "key": "keep_inventory",
-  "value": true
-}
-~~~
-
-Successful response:
-
-~~~json
-{
-  "world": "creative",
-  "gamerule": {
-    "key": "keep_inventory",
-    "type": "boolean",
-    "value": true
-  }
-}
-~~~
-
-Use JSON Booleans (`true` or `false`) for Boolean rules and JSON integers for integer rules. Keys use snake_case, such as `keep_inventory` and `random_tick_speed`.
-
-The bridge enumerates `Registry.GAME_RULE` and checks `world.isEnabled(rule)` before reading a rule or accepting an update. The API maps validation errors to HTTP 400, missing-world errors to HTTP 404, and bridge/runtime failures to HTTP 503.
-
-## Verification record
-
-Verified on 2026-10-10 after deploying the registry-based Paper bridge fix:
-
-- `GET /worlds/gamerules?world=creative` returned HTTP 200.
-- `GET /worlds/gamerules?world=world` returned HTTP 200.
-- Both worlds returned 58 gamerules at the time of testing.
-- `creative` had `keep_inventory = true`.
-- `world` (Survival) had `keep_inventory = false`.
-- Both worlds had `random_tick_speed = 3`.
-- A same-value PUT for `creative.keep_inventory = true` returned HTTP 200, and a subsequent GET confirmed the value.
-- A same-value PUT for `world.random_tick_speed = 3` returned HTTP 200, and a subsequent GET confirmed the value.
-- The bridge loaded successfully after a Minecraft restart and listened on `127.0.0.1:25586`.
-- Minecraft RCON remained disabled.
-
-These tests validate the gamerule read and write paths described above. They do not establish that every API endpoint listed in this document has been exhaustively tested.
-
-## Build the Paper bridge
-
-Run from the `paper-management-bridge` directory on a development machine with Java 21 and Maven:
-
-~~~powershell
-mvn -DskipTests package
-~~~
-
-The plugin JAR is generated under `target/`. Build output, the local Multiverse JAR, and temporary source backups are excluded from version control. Keep a verified rollback copy before replacing the deployed plugin.
+The sanitized API source, dashboard, and rebuilt bridge were deployed to CT100 on 10 November 2026. A recent SSD-stored CT backup and rollback copies were verified before deployment. Both services are active. The private dashboard origin is held outside Git in a restricted file and systemd drop-in. No live world mutation was performed. A clean-clone installation and isolated Paper/Multiverse lifecycle integration test are still outstanding.

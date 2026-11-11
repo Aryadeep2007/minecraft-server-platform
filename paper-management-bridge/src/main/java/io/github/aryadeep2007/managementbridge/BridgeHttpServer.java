@@ -10,15 +10,26 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import org.bukkit.GameRule;
+import org.bukkit.Difficulty;
+import org.bukkit.GameMode;
 import org.bukkit.Registry;
 import org.bukkit.World;
+import org.bukkit.WorldType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.mvplugins.multiverse.core.MultiverseCoreApi;
+import org.mvplugins.multiverse.core.world.LoadedMultiverseWorld;
+import org.mvplugins.multiverse.core.world.MultiverseWorld;
+import org.mvplugins.multiverse.core.world.options.CreateWorldOptions;
+import org.mvplugins.multiverse.core.world.options.ImportWorldOptions;
+import org.mvplugins.multiverse.core.world.options.LoadWorldOptions;
+import org.mvplugins.multiverse.core.world.options.UnloadWorldOptions;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.concurrent.ExecutionException;
@@ -26,6 +37,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 
 public final class BridgeHttpServer {
 
@@ -33,6 +45,8 @@ public final class BridgeHttpServer {
             "/opt/minecraft-management/secrets/bridge-token";
     private static final int PORT = 25586;
     private static final Gson GSON = new Gson();
+    private static final Pattern WORLD_NAME =
+            Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{0,31}");
 
     private final JavaPlugin plugin;
     private HttpServer server;
@@ -97,17 +111,30 @@ public final class BridgeHttpServer {
             }
 
             String path = exchange.getRequestURI().getPath();
+            boolean worldAction = "/worlds/load".equals(path)
+                    || "/worlds/unload".equals(path)
+                    || "/worlds/create".equals(path)
+                    || "/worlds/archive".equals(path)
+                    || "/worlds/restore".equals(path)
+                    || "/worlds/import".equals(path);
 
             if (!"/health".equals(path)
                     && !"/worlds".equals(path)
                     && !"/multiverse/worlds".equals(path)
-                    && !"/worlds/gamerules".equals(path)) {
+                    && !"/worlds/gamerules".equals(path)
+                    && !worldAction) {
                 sendJson(exchange, 404, "{\"error\":\"not_found\"}");
                 return;
             }
 
             if (!"/worlds/gamerules".equals(path)
+                    && !worldAction
                     && !"GET".equals(exchange.getRequestMethod())) {
+                sendJson(exchange, 405, "{\"error\":\"method_not_allowed\"}");
+                return;
+            }
+
+            if (worldAction && !"POST".equals(exchange.getRequestMethod())) {
                 sendJson(exchange, 405, "{\"error\":\"method_not_allowed\"}");
                 return;
             }
@@ -122,6 +149,11 @@ public final class BridgeHttpServer {
 
             if ("/worlds/gamerules".equals(path)) {
                 handleWorldGamerulesRequest(exchange);
+                return;
+            }
+
+            if (worldAction) {
+                handleWorldActionRequest(exchange, path);
                 return;
             }
 
@@ -173,6 +205,522 @@ public final class BridgeHttpServer {
         }).get(3, TimeUnit.SECONDS);
     }
 
+    private void handleWorldActionRequest(
+            HttpExchange exchange, String path
+    ) throws IOException {
+        JsonObject payload;
+        try {
+            payload = readJsonObject(exchange);
+        } catch (JsonParseException | IllegalArgumentException exception) {
+            sendJson(exchange, 400, "{\"error\":\"invalid_json_request\"}");
+            return;
+        }
+
+        try {
+            BridgeResponse response;
+            if ("/worlds/load".equals(path)) {
+                response = loadWorld(payload);
+            } else if ("/worlds/unload".equals(path)) {
+                response = unloadWorld(payload);
+            } else if ("/worlds/create".equals(path)) {
+                response = createWorld(payload);
+            } else if ("/worlds/archive".equals(path)) {
+                response = archiveWorld(payload);
+            } else if ("/worlds/restore".equals(path)) {
+                response = restoreWorld(payload);
+            } else {
+                response = importWorld(payload);
+            }
+            sendJson(exchange, response.status(), response.body());
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            sendJson(exchange, 503, "{\"error\":\"world_action_interrupted\"}");
+        } catch (ExecutionException exception) {
+            plugin.getLogger().warning(
+                    "World action failed: "
+                            + exception.getCause().getClass().getSimpleName()
+            );
+            sendJson(exchange, 503, "{\"error\":\"world_action_unavailable\"}");
+        } catch (TimeoutException exception) {
+            sendJson(exchange, 504, "{\"error\":\"world_action_timed_out\"}");
+        }
+    }
+
+    private BridgeResponse loadWorld(JsonObject payload)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        String name = confirmedWorldName(payload);
+        if (name == null) {
+            return errorResponse(400, "invalid_world_confirmation");
+        }
+
+        return plugin.getServer().getScheduler().callSyncMethod(plugin, () -> {
+            if (!MultiverseCoreApi.isLoaded()) {
+                return errorResponse(503, "multiverse_unavailable");
+            }
+            var manager = MultiverseCoreApi.get().getWorldManager();
+            MultiverseWorld world = manager.getWorld(name)
+                    .getOrElse((MultiverseWorld) null);
+            if (world == null) {
+                return errorResponse(404, "world_not_registered");
+            }
+            if (world.isLoaded()) {
+                return errorResponse(409, "world_already_loaded");
+            }
+
+            var result = manager.loadWorld(LoadWorldOptions.world(world));
+            if (result.isFailure()) {
+                return errorResponse(409, "world_load_rejected");
+            }
+            return worldActionResponse(name, true, "loaded");
+        }).get(30, TimeUnit.SECONDS);
+    }
+
+    private BridgeResponse unloadWorld(JsonObject payload)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        String name = confirmedWorldName(payload);
+        if (name == null) {
+            return errorResponse(400, "invalid_world_confirmation");
+        }
+
+        return plugin.getServer().getScheduler().callSyncMethod(plugin, () -> {
+            if (!MultiverseCoreApi.isLoaded()) {
+                return errorResponse(503, "multiverse_unavailable");
+            }
+            var manager = MultiverseCoreApi.get().getWorldManager();
+            LoadedMultiverseWorld world = manager.getLoadedWorld(name)
+                    .getOrElse((LoadedMultiverseWorld) null);
+            if (world == null) {
+                return errorResponse(409, "world_not_loaded");
+            }
+
+            var bukkitWorld = world.getBukkitWorld()
+                    .getOrElse((World) null);
+            if (bukkitWorld == null) {
+                return errorResponse(409, "world_unavailable");
+            }
+            if (!plugin.getServer().getWorlds().isEmpty()
+                    && plugin.getServer().getWorlds().get(0).getName().equals(name)) {
+                return errorResponse(409, "primary_world_protected");
+            }
+            if (!bukkitWorld.getPlayers().isEmpty()) {
+                return errorResponse(409, "world_has_players");
+            }
+
+            var result = manager.unloadWorld(
+                    UnloadWorldOptions.world(world)
+                            .saveBukkitWorld(true)
+                            .unloadBukkitWorld(true)
+            );
+            if (result.isFailure()) {
+                return errorResponse(409, "world_unload_rejected");
+            }
+            return worldActionResponse(name, false, "unloaded");
+        }).get(30, TimeUnit.SECONDS);
+    }
+
+    private BridgeResponse createWorld(JsonObject payload)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        if (payload.size() != 7
+                || !payload.has("name")
+                || !payload.has("confirmed_name")
+                || !payload.has("environment")
+                || !payload.has("world_type")
+                || !payload.has("game_mode")
+                || !payload.has("difficulty")
+                || !payload.has("generate_structures")) {
+            return errorResponse(400, "invalid_world_create_payload");
+        }
+
+        String name = stringValue(payload, "name");
+        String confirmed = stringValue(payload, "confirmed_name");
+        String environmentValue = stringValue(payload, "environment");
+        String worldTypeValue = stringValue(payload, "world_type");
+        String gameModeValue = stringValue(payload, "game_mode");
+        String difficultyValue = stringValue(payload, "difficulty");
+        JsonElement structuresValue = payload.get("generate_structures");
+        if (!validWorldName(name)
+                || !name.equals(confirmed)
+                || environmentValue == null
+                || worldTypeValue == null
+                || gameModeValue == null
+                || difficultyValue == null
+                || !structuresValue.isJsonPrimitive()
+                || !structuresValue.getAsJsonPrimitive().isBoolean()) {
+            return errorResponse(400, "invalid_world_create_payload");
+        }
+
+        World.Environment environment;
+        WorldType worldType;
+        GameMode gameMode;
+        Difficulty difficulty;
+        try {
+            environment = World.Environment.valueOf(environmentValue);
+            worldType = WorldType.valueOf(worldTypeValue);
+            gameMode = GameMode.valueOf(gameModeValue);
+            difficulty = Difficulty.valueOf(difficultyValue);
+        } catch (IllegalArgumentException exception) {
+            return errorResponse(400, "unsupported_world_setting");
+        }
+        if (environment == World.Environment.CUSTOM) {
+            return errorResponse(400, "unsupported_world_environment");
+        }
+
+        boolean generateStructures = structuresValue.getAsBoolean();
+        return plugin.getServer().getScheduler().callSyncMethod(plugin, () -> {
+            if (!MultiverseCoreApi.isLoaded()) {
+                return errorResponse(503, "multiverse_unavailable");
+            }
+            var manager = MultiverseCoreApi.get().getWorldManager();
+            Path worldFolder = plugin.getServer().getWorldContainer().toPath()
+                    .resolve(name);
+            if (manager.isWorld(name)
+                    || Files.exists(worldFolder, LinkOption.NOFOLLOW_LINKS)) {
+                return errorResponse(409, "world_name_already_exists");
+            }
+
+            var result = manager.createWorld(
+                    CreateWorldOptions.worldName(name)
+                            .environment(environment)
+                            .worldType(worldType)
+                            .generateStructures(generateStructures)
+                            .doFolderCheck(true)
+            );
+            if (result.isFailure()) {
+                return errorResponse(409, "world_create_rejected");
+            }
+
+            LoadedMultiverseWorld created = result.get();
+            boolean gameModeSet = created.setGameMode(gameMode).isSuccess();
+            boolean difficultySet = created.setDifficulty(difficulty).isSuccess();
+            if (!gameModeSet || !difficultySet) {
+                plugin.getLogger().warning(
+                        "Created world settings could not be fully applied: " + name
+                );
+                return errorResponse(503, "world_settings_update_failed");
+            }
+            return worldActionResponse(name, true, "created");
+        }).get(180, TimeUnit.SECONDS);
+    }
+
+    private BridgeResponse archiveWorld(JsonObject payload)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        String name = confirmedWorldName(payload);
+        if (name == null) {
+            return errorResponse(400, "invalid_world_confirmation");
+        }
+
+        return plugin.getServer().getScheduler().callSyncMethod(plugin, () -> {
+            if (!MultiverseCoreApi.isLoaded()) {
+                return errorResponse(503, "multiverse_unavailable");
+            }
+            var manager = MultiverseCoreApi.get().getWorldManager();
+            MultiverseWorld world = manager.getWorld(name)
+                    .getOrElse((MultiverseWorld) null);
+            if (world == null) {
+                return errorResponse(404, "world_not_registered");
+            }
+            if (!plugin.getServer().getWorlds().isEmpty()
+                    && plugin.getServer().getWorlds().get(0).getName().equals(name)) {
+                return errorResponse(409, "primary_world_protected");
+            }
+
+            Path root = plugin.getServer().getWorldContainer().toPath().toRealPath();
+            Path source = root.resolve(name).normalize();
+            if (!isSafeWorldDirectory(root, name)) {
+                return errorResponse(404, "world_folder_not_found");
+            }
+
+            Path trash = root.resolve(".management-world-trash");
+            if (Files.exists(trash, LinkOption.NOFOLLOW_LINKS)
+                    && (Files.isSymbolicLink(trash)
+                    || !Files.isDirectory(trash, LinkOption.NOFOLLOW_LINKS))) {
+                return errorResponse(409, "world_archive_directory_invalid");
+            }
+            if (!Files.exists(trash, LinkOption.NOFOLLOW_LINKS)) {
+                Files.createDirectory(trash);
+            }
+            Path realTrash = trash.toRealPath();
+            if (!root.equals(realTrash.getParent())) {
+                return errorResponse(409, "world_archive_directory_invalid");
+            }
+            Path destination = realTrash.resolve(name);
+            Path metadata = realTrash.resolve(name + ".json");
+            if (Files.exists(destination, LinkOption.NOFOLLOW_LINKS)
+                    || Files.exists(metadata, LinkOption.NOFOLLOW_LINKS)) {
+                return errorResponse(409, "world_already_archived");
+            }
+
+            if (world.isLoaded()) {
+                LoadedMultiverseWorld loaded = manager.getLoadedWorld(name)
+                        .getOrElse((LoadedMultiverseWorld) null);
+                World bukkitWorld = loaded == null
+                        ? null
+                        : loaded.getBukkitWorld().getOrElse((World) null);
+                if (bukkitWorld == null) {
+                    return errorResponse(409, "world_unavailable");
+                }
+                if (!bukkitWorld.getPlayers().isEmpty()) {
+                    return errorResponse(409, "world_has_players");
+                }
+                var unload = manager.unloadWorld(
+                        UnloadWorldOptions.world(loaded)
+                                .saveBukkitWorld(true)
+                                .unloadBukkitWorld(true)
+                );
+                if (unload.isFailure()) {
+                    return errorResponse(409, "world_unload_rejected");
+                }
+            }
+
+            boolean wasAutoLoad = world.isAutoLoad();
+            if (world.setAutoLoad(false).isFailure()
+                    || manager.saveWorldsConfig().isFailure()) {
+                world.setAutoLoad(wasAutoLoad);
+                manager.saveWorldsConfig();
+                return errorResponse(503, "world_autoload_update_failed");
+            }
+            try {
+                Files.move(source, destination);
+                JsonObject archiveMetadata = new JsonObject();
+                archiveMetadata.addProperty("auto_load", wasAutoLoad);
+                Files.writeString(
+                        metadata,
+                        GSON.toJson(archiveMetadata),
+                        StandardCharsets.UTF_8
+                );
+            } catch (IOException exception) {
+                try {
+                    Files.deleteIfExists(metadata);
+                } catch (IOException cleanupException) {
+                    plugin.getLogger().warning(
+                            "Could not remove incomplete world archive metadata."
+                    );
+                }
+                if (Files.exists(destination, LinkOption.NOFOLLOW_LINKS)
+                        && !Files.exists(source, LinkOption.NOFOLLOW_LINKS)) {
+                    Files.move(destination, source);
+                }
+                world.setAutoLoad(wasAutoLoad);
+                manager.saveWorldsConfig();
+                return errorResponse(503, "world_archive_failed");
+            }
+            JsonObject body = new JsonObject();
+            body.addProperty("world", name);
+            body.addProperty("loaded", false);
+            body.addProperty("archived", true);
+            body.addProperty("action", "archived");
+            return new BridgeResponse(200, GSON.toJson(body));
+        }).get(60, TimeUnit.SECONDS);
+    }
+
+    private BridgeResponse restoreWorld(JsonObject payload)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        String name = confirmedWorldName(payload);
+        if (name == null) {
+            return errorResponse(400, "invalid_world_confirmation");
+        }
+
+        return plugin.getServer().getScheduler().callSyncMethod(plugin, () -> {
+            if (!MultiverseCoreApi.isLoaded()) {
+                return errorResponse(503, "multiverse_unavailable");
+            }
+            var manager = MultiverseCoreApi.get().getWorldManager();
+            if (!manager.isWorld(name)) {
+                return errorResponse(404, "world_not_registered");
+            }
+
+            Path root = plugin.getServer().getWorldContainer().toPath().toRealPath();
+            Path trash = root.resolve(".management-world-trash");
+            if (Files.isSymbolicLink(trash)
+                    || !Files.isDirectory(trash, LinkOption.NOFOLLOW_LINKS)) {
+                return errorResponse(404, "world_archive_not_found");
+            }
+            Path realTrash = trash.toRealPath();
+            if (!root.equals(realTrash.getParent())) {
+                return errorResponse(409, "world_archive_directory_invalid");
+            }
+            Path source = realTrash.resolve(name);
+            Path destination = root.resolve(name).normalize();
+            Path metadata = realTrash.resolve(name + ".json");
+            if (!destination.getParent().equals(root)
+                    || !isSafeWorldDirectory(realTrash, name)) {
+                return errorResponse(404, "world_archive_not_found");
+            }
+            if (Files.exists(destination, LinkOption.NOFOLLOW_LINKS)) {
+                return errorResponse(409, "world_folder_already_exists");
+            }
+
+            boolean autoLoad = false;
+            if (Files.exists(metadata, LinkOption.NOFOLLOW_LINKS)) {
+                if (Files.isSymbolicLink(metadata)
+                        || !Files.isRegularFile(metadata, LinkOption.NOFOLLOW_LINKS)) {
+                    return errorResponse(409, "world_archive_metadata_invalid");
+                }
+                JsonElement parsed = JsonParser.parseString(
+                        Files.readString(metadata, StandardCharsets.UTF_8)
+                );
+                if (!parsed.isJsonObject()
+                        || !parsed.getAsJsonObject().has("auto_load")
+                        || !parsed.getAsJsonObject().get("auto_load").isJsonPrimitive()
+                        || !parsed.getAsJsonObject().get("auto_load")
+                        .getAsJsonPrimitive().isBoolean()) {
+                    return errorResponse(409, "world_archive_metadata_invalid");
+                }
+                autoLoad = parsed.getAsJsonObject().get("auto_load").getAsBoolean();
+            }
+
+            Files.move(source, destination);
+            MultiverseWorld world = manager.getWorld(name)
+                    .getOrElse((MultiverseWorld) null);
+            if (world == null) {
+                Files.move(destination, source);
+                return errorResponse(503, "world_restore_config_failed");
+            }
+            boolean previousAutoLoad = world.isAutoLoad();
+            if (world.setAutoLoad(autoLoad).isFailure()) {
+                Files.move(destination, source);
+                return errorResponse(503, "world_restore_config_failed");
+            }
+            if (manager.saveWorldsConfig().isFailure()) {
+                world.setAutoLoad(previousAutoLoad);
+                manager.saveWorldsConfig();
+                Files.move(destination, source);
+                return errorResponse(503, "world_restore_config_failed");
+            }
+            try {
+                Files.deleteIfExists(metadata);
+            } catch (IOException exception) {
+                plugin.getLogger().warning(
+                        "World restored but archive metadata cleanup failed."
+                );
+            }
+            JsonObject body = new JsonObject();
+            body.addProperty("world", name);
+            body.addProperty("loaded", false);
+            body.addProperty("archived", false);
+            body.addProperty("action", "restored");
+            return new BridgeResponse(200, GSON.toJson(body));
+        }).get(60, TimeUnit.SECONDS);
+    }
+
+    private BridgeResponse importWorld(JsonObject payload)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        if (payload.size() != 3
+                || !payload.has("name")
+                || !payload.has("confirmed_name")
+                || !payload.has("environment")) {
+            return errorResponse(400, "invalid_world_import_payload");
+        }
+        String name = stringValue(payload, "name");
+        String confirmed = stringValue(payload, "confirmed_name");
+        String environmentValue = stringValue(payload, "environment");
+        if (!validWorldName(name) || !name.equals(confirmed)
+                || environmentValue == null) {
+            return errorResponse(400, "invalid_world_import_payload");
+        }
+
+        World.Environment environment;
+        try {
+            environment = World.Environment.valueOf(environmentValue);
+        } catch (IllegalArgumentException exception) {
+            return errorResponse(400, "unsupported_world_environment");
+        }
+        if (environment == World.Environment.CUSTOM) {
+            return errorResponse(400, "unsupported_world_environment");
+        }
+
+        return plugin.getServer().getScheduler().callSyncMethod(plugin, () -> {
+            if (!MultiverseCoreApi.isLoaded()) {
+                return errorResponse(503, "multiverse_unavailable");
+            }
+            var manager = MultiverseCoreApi.get().getWorldManager();
+            if (manager.isWorld(name)) {
+                return errorResponse(409, "world_name_already_registered");
+            }
+
+            Path root = plugin.getServer().getWorldContainer().toPath().toRealPath();
+            if (!isSafeWorldDirectory(root, name)) {
+                return errorResponse(400, "world_folder_not_valid");
+            }
+
+            var result = manager.importWorld(
+                    ImportWorldOptions.worldName(name)
+                            .environment(environment)
+                            .doFolderCheck(true)
+            );
+            if (result.isFailure()) {
+                return errorResponse(409, "world_import_rejected");
+            }
+            return worldActionResponse(name, true, "imported");
+        }).get(60, TimeUnit.SECONDS);
+    }
+
+    private boolean isArchivedWorld(String name) {
+        try {
+            Path root = plugin.getServer().getWorldContainer().toPath().toRealPath();
+            Path trash = root.resolve(".management-world-trash");
+            if (Files.isSymbolicLink(trash)
+                    || !Files.isDirectory(trash, LinkOption.NOFOLLOW_LINKS)) {
+                return false;
+            }
+            Path candidate = trash.resolve(name).normalize();
+            return candidate.getParent().equals(trash)
+                    && !Files.isSymbolicLink(candidate)
+                    && Files.isDirectory(candidate, LinkOption.NOFOLLOW_LINKS);
+        } catch (IOException exception) {
+            return false;
+        }
+    }
+
+    static String confirmedWorldName(JsonObject payload) {
+        if (payload.size() != 2
+                || !payload.has("name")
+                || !payload.has("confirmed_name")) {
+            return null;
+        }
+        String name = stringValue(payload, "name");
+        String confirmed = stringValue(payload, "confirmed_name");
+        return validWorldName(name) && name.equals(confirmed) ? name : null;
+    }
+
+    private static String stringValue(JsonObject payload, String key) {
+        JsonElement value = payload.get(key);
+        if (value == null || !value.isJsonPrimitive()
+                || !value.getAsJsonPrimitive().isString()) {
+            return null;
+        }
+        return value.getAsString();
+    }
+
+    static boolean validWorldName(String name) {
+        return name != null && WORLD_NAME.matcher(name).matches()
+                && !".".equals(name) && !"..".equals(name);
+    }
+
+    static boolean isSafeWorldDirectory(Path root, String name) {
+        if (!validWorldName(name)) {
+            return false;
+        }
+        Path normalizedRoot = root.toAbsolutePath().normalize();
+        Path folder = normalizedRoot.resolve(name).normalize();
+        return normalizedRoot.equals(folder.getParent())
+                && !Files.isSymbolicLink(folder)
+                && Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS)
+                && Files.isRegularFile(
+                        folder.resolve("level.dat"), LinkOption.NOFOLLOW_LINKS
+                );
+    }
+
+    private static BridgeResponse worldActionResponse(
+            String name, boolean loaded, String action
+    ) {
+        JsonObject body = new JsonObject();
+        body.addProperty("world", name);
+        body.addProperty("loaded", loaded);
+        body.addProperty("action", action);
+        return new BridgeResponse(200, GSON.toJson(body));
+    }
+
     private String getMultiverseWorldsJson()
             throws InterruptedException, ExecutionException, TimeoutException {
         return plugin.getServer().getScheduler().callSyncMethod(plugin, () -> {
@@ -200,6 +748,8 @@ public final class BridgeHttpServer {
                         .append(world.getEnvironment().name())
                         .append("\",\"loaded\":")
                         .append(world.isLoaded())
+                        .append(",\"archived\":")
+                        .append(isArchivedWorld(world.getName()))
                         .append('}');
             }
 

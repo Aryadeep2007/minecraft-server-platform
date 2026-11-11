@@ -1,0 +1,42 @@
+name: Feature request
+description: Propose an improvement to the project.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the README feature-status section first. Do not include private infrastructure details or credentials.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user need or limitation would this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the desired behavior and relevant safeguards.
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Area
+      options:
+        - Dashboard
+        - Paper bridge
+        - Management API
+        - Documentation
+        - Operations
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: destructive
+    attributes:
+      label: Data and safety impact
+      options:
+        - label: This request could change or delete worlds, server data, storage, or access configuration.
+          required: false

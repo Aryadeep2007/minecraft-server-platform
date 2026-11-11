@@ -26,6 +26,16 @@ const elements = {
     worldCount: document.getElementById("world-count"),
     worldsTag: document.getElementById("worlds-tag"),
     worldsList: document.getElementById("worlds-list"),
+    worldSearch: document.getElementById("world-search"),
+    worldStateFilter: document.getElementById("world-state-filter"),
+    worldSummary: document.getElementById("world-summary"),
+    refreshWorldsButton: document.getElementById("refresh-worlds-button"),
+    worldCreateForm: document.getElementById("world-create-form"),
+    worldCreateMessage: document.getElementById("world-create-message"),
+    worldImportForm: document.getElementById("world-import-form"),
+    worldImportMessage: document.getElementById("world-import-message"),
+    worldRegisterForm: document.getElementById("world-register-form"),
+    gamerulesPanel: document.getElementById("gamerules"),
     lastUpdated: document.getElementById("last-updated"),
     refreshButton: document.getElementById("refresh-button"),
     dashboardYear: document.getElementById("dashboard-year"),
@@ -144,7 +154,7 @@ async function apiPut(path, payload) {
     }
 }
 
-async function apiWrite(path, method, payload) {
+async function apiWrite(path, method, payload, timeoutMs = REQUEST_TIMEOUT_MS) {
     if (!["POST", "DELETE"].includes(method)) {
         throw new Error("Unsupported write method");
     }
@@ -152,7 +162,7 @@ async function apiWrite(path, method, payload) {
     const controller = new AbortController();
     const timeout = window.setTimeout(
         () => controller.abort(),
-        REQUEST_TIMEOUT_MS
+        timeoutMs
     );
 
     try {
@@ -186,6 +196,51 @@ async function apiWrite(path, method, payload) {
     } catch (error) {
         if (error.name === "AbortError") {
             throw new Error("Request timed out");
+        }
+        if (error instanceof TypeError) {
+            throw new Error("Could not reach the API from this page");
+        }
+        throw error;
+    } finally {
+        window.clearTimeout(timeout);
+    }
+}
+
+async function apiUpload(path, file, headers, timeoutMs = 120000) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(`${API_BASE}${path}`, {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/zip",
+                ...headers
+            },
+            credentials: "same-origin",
+            cache: "no-store",
+            signal: controller.signal,
+            body: file
+        });
+
+        let data = null;
+        try {
+            data = await response.json();
+        } catch {
+            // The API normally returns JSON errors.
+        }
+        if (!response.ok) {
+            const detail = typeof data?.detail === "string"
+                ? data.detail
+                : `HTTP ${response.status}`;
+            const error = new Error(detail);
+            error.status = response.status;
+            throw error;
+        }
+        return data;
+    } catch (error) {
+        if (error.name === "AbortError") {
+            throw new Error("Upload timed out; refresh the world list before retrying");
         }
         if (error instanceof TypeError) {
             throw new Error("Could not reach the API from this page");
@@ -512,9 +567,19 @@ function createWorldRow(world, multiverseInfo) {
 
     const detail = document.createElement("small");
     const alias = multiverseInfo?.alias;
-    detail.textContent = alias && alias !== world.name
-        ? `${environment} · ${alias}`
-        : environment;
+    const worldDetails = [environment];
+
+    if (alias && alias !== world.name) {
+        worldDetails.push(alias);
+    }
+
+    if (Number.isInteger(world.players) && world.players >= 0) {
+        worldDetails.push(
+            `${world.players} ${world.players === 1 ? "player" : "players"}`
+        );
+    }
+
+    detail.textContent = worldDetails.join(" · ");
 
     copy.append(name, detail);
 
@@ -522,26 +587,275 @@ function createWorldRow(world, multiverseInfo) {
     const loaded = typeof multiverseInfo?.loaded === "boolean"
         ? multiverseInfo.loaded
         : null;
+    const archived = multiverseInfo?.archived === true;
 
     state.className = `world-state${loaded === null ? " unknown" : ""}`;
 
     const dot = document.createElement("span");
-    dot.className = `status-dot${loaded === true ? " online" : ""}`;
+    dot.className = `status-dot${loaded === true && !archived ? " online" : ""}`;
     dot.setAttribute("aria-hidden", "true");
 
     const stateLabel = document.createElement("span");
-    stateLabel.textContent = loaded === null
+    stateLabel.textContent = archived
+        ? "Archived"
+        : loaded === null
         ? "Listed"
         : loaded ? "Loaded" : "Unloaded";
 
     state.append(dot, stateLabel);
-    row.append(icon, copy, state);
+
+    const actions = document.createElement("div");
+    actions.className = "world-actions";
+
+    if (loaded === true && !archived) {
+        const manageButton = document.createElement("button");
+        manageButton.className = "world-manage-button";
+        manageButton.type = "button";
+        manageButton.textContent = "Manage gamerules";
+        manageButton.setAttribute("aria-label", `Manage gamerules for ${world.name}`);
+        manageButton.addEventListener("click", () => {
+            if (elements.gameruleWorld) {
+                elements.gameruleWorld.value = world.name;
+            }
+            elements.gamerulesPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+            loadWorldGamerules();
+        });
+        actions.append(manageButton);
+    }
+
+    if (archived) {
+        const restoreButton = document.createElement("button");
+        restoreButton.className = "world-action-button";
+        restoreButton.type = "button";
+        restoreButton.textContent = "Restore";
+        restoreButton.addEventListener("click", () => {
+            runWorldAction(world.name, "restore", restoreButton);
+        });
+        actions.append(restoreButton);
+    } else if (loaded !== null) {
+        const actionButton = document.createElement("button");
+        actionButton.className = "world-action-button";
+        actionButton.type = "button";
+        actionButton.textContent = loaded ? "Unload" : "Load";
+        actionButton.setAttribute(
+            "aria-label",
+            `${loaded ? "Unload" : "Load"} world ${world.name}`
+        );
+        actionButton.addEventListener("click", () => {
+            runWorldAction(world.name, loaded ? "unload" : "load", actionButton);
+        });
+        actions.append(actionButton);
+
+        const archiveButton = document.createElement("button");
+        archiveButton.className = "world-action-button world-archive-button";
+        archiveButton.type = "button";
+        archiveButton.textContent = "Archive";
+        archiveButton.setAttribute("aria-label", `Archive world ${world.name}`);
+        archiveButton.addEventListener("click", () => {
+            runWorldAction(world.name, "archive", archiveButton);
+        });
+        actions.append(archiveButton);
+    }
+
+    row.append(icon, copy, state, actions);
 
     return row;
 }
 
+async function runWorldAction(name, action, button) {
+    const descriptions = {
+        load: "load",
+        unload: "unload",
+        archive: "move into the reversible recovery bin",
+        restore: "restore from the recovery bin"
+    };
+    const confirmation = window.prompt(
+        `Type ${name} to confirm you want to ${descriptions[action]} this world.`
+    );
+    if (confirmation !== name) return;
+
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    const progress = {
+        load: "Loading",
+        unload: "Unloading",
+        archive: "Archiving",
+        restore: "Restoring"
+    }[action];
+    setText(elements.worldSummary, `${progress} ${name}...`);
+    try {
+        await apiWrite(
+            `/worlds/${action}`,
+            "POST",
+            { name, confirmed_name: confirmation },
+            70000
+        );
+        const result = {
+            load: "loaded",
+            unload: "unloaded",
+            archive: "archived (files retained for restore)",
+            restore: "restored (currently unloaded)"
+        }[action];
+        setText(elements.worldSummary, `${name} ${result}.`);
+        await refreshWorldOverview();
+    } catch (error) {
+        setText(elements.worldSummary, `Could not ${action} ${name}: ${error.message}`);
+    } finally {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+    }
+}
+
+async function createWorldFromForm(event) {
+    event.preventDefault();
+    const form = elements.worldCreateForm;
+    if (!form || !form.reportValidity()) return;
+
+    const formData = new FormData(form);
+    const name = String(formData.get("name") || "").trim();
+    const confirmation = window.prompt(
+        `World creation can use significant disk and memory. Type ${name} to confirm.`
+    );
+    if (confirmation !== name) return;
+
+    const button = form.querySelector('button[type="submit"]');
+    if (button) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+    }
+    if (elements.worldCreateMessage) {
+        elements.worldCreateMessage.classList.remove("error");
+        setText(elements.worldCreateMessage, `Creating ${name}. This can take a few minutes...`);
+    }
+
+    try {
+        const result = await apiWrite(
+            "/worlds/create",
+            "POST",
+            {
+                name,
+                confirmed_name: confirmation,
+                environment: formData.get("environment"),
+                world_type: formData.get("world_type"),
+                game_mode: formData.get("game_mode"),
+                difficulty: formData.get("difficulty"),
+                generate_structures: formData.get("generate_structures") === "on"
+            },
+            190000
+        );
+        if (elements.worldCreateMessage) {
+            setText(elements.worldCreateMessage, `World ${result.world} created and loaded.`);
+        }
+        form.reset();
+        await refreshWorldOverview();
+    } catch (error) {
+        if (elements.worldCreateMessage) {
+            elements.worldCreateMessage.classList.add("error");
+            setText(
+                elements.worldCreateMessage,
+                `Could not create ${name}: ${error.message}. Refresh the world list before retrying.`
+            );
+        }
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
+    }
+}
+
+async function importWorldFromForm(event) {
+    event.preventDefault();
+    const form = elements.worldImportForm;
+    if (!form || !form.reportValidity()) return;
+
+    const formData = new FormData(form);
+    const name = String(formData.get("name") || "").trim();
+    const archive = formData.get("archive");
+    if (!(archive instanceof File) || archive.size === 0) return;
+    if (archive.size > 256 * 1024 * 1024) {
+        elements.worldImportMessage?.classList.add("error");
+        setText(elements.worldImportMessage, "ZIP files must be 256 MiB or smaller.");
+        return;
+    }
+
+    const confirmation = window.prompt(
+        `Import ${archive.name} as world ${name}? Type ${name} to confirm.`
+    );
+    if (confirmation !== name) return;
+
+    const button = form.querySelector('button[type="submit"]');
+    if (button) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+    }
+    elements.worldImportMessage?.classList.remove("error");
+    setText(elements.worldImportMessage, `Validating and importing ${archive.name}...`);
+
+    try {
+        const result = await apiUpload(
+            "/worlds/import",
+            archive,
+            {
+                "X-World-Name": name,
+                "X-World-Confirmation": confirmation,
+                "X-World-Environment": String(formData.get("environment"))
+            },
+            180000
+        );
+        setText(elements.worldImportMessage, `World ${result.world} imported and loaded.`);
+        form.reset();
+        await refreshWorldOverview();
+    } catch (error) {
+        elements.worldImportMessage?.classList.add("error");
+        setText(elements.worldImportMessage, `Import failed: ${error.message}`);
+        if (error.message.includes("files were preserved")) {
+            const registerName = elements.worldRegisterForm?.elements.namedItem("name");
+            const registerEnvironment = elements.worldRegisterForm?.elements.namedItem("environment");
+            if (registerName) registerName.value = name;
+            if (registerEnvironment) registerEnvironment.value = String(formData.get("environment"));
+        }
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
+    }
+}
+
+async function registerExistingWorld(event) {
+    event.preventDefault();
+    const form = elements.worldRegisterForm;
+    if (!form || !form.reportValidity()) return;
+    const formData = new FormData(form);
+    const name = String(formData.get("name") || "").trim();
+    const confirmation = window.prompt(
+        `Register the existing ${name} folder without replacing it? Type ${name} to confirm.`
+    );
+    if (confirmation !== name) return;
+
+    const button = form.querySelector('button[type="submit"]');
+    if (button) button.disabled = true;
+    try {
+        const result = await apiWrite("/worlds/register", "POST", {
+            name,
+            confirmed_name: confirmation,
+            environment: formData.get("environment")
+        }, 70000);
+        elements.worldImportMessage?.classList.remove("error");
+        setText(elements.worldImportMessage, `World ${result.world} registered and loaded.`);
+        form.reset();
+        await refreshWorldOverview();
+    } catch (error) {
+        elements.worldImportMessage?.classList.add("error");
+        setText(elements.worldImportMessage, `Could not register ${name}: ${error.message}`);
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
 function renderWorlds(worldsData, multiverseData) {
-    const worlds = Array.isArray(worldsData?.worlds)
+    const loadedWorlds = Array.isArray(worldsData?.worlds)
         ? worldsData.worlds.filter(
             world => world && typeof world.name === "string"
         )
@@ -557,8 +871,51 @@ function renderWorlds(worldsData, multiverseData) {
             .map(world => [world.name, world])
     );
 
+    const loadedByName = new Map(loadedWorlds.map(world => [world.name, world]));
+    const mergedWorlds = new Map();
+    for (const multiverseWorld of multiverseWorlds) {
+        if (!multiverseWorld || typeof multiverseWorld.name !== "string") continue;
+        const loadedWorld = loadedByName.get(multiverseWorld.name);
+        mergedWorlds.set(multiverseWorld.name, {
+            ...(loadedWorld || {}),
+            name: multiverseWorld.name,
+            environment: loadedWorld?.environment || multiverseWorld.environment,
+            alias: multiverseWorld.alias,
+            players: loadedWorld?.players ?? 0,
+            loaded: multiverseWorld.loaded,
+            archived: multiverseWorld.archived === true
+        });
+    }
+    for (const loadedWorld of loadedWorlds) {
+        if (!mergedWorlds.has(loadedWorld.name)) {
+            mergedWorlds.set(loadedWorld.name, {
+                ...loadedWorld,
+                loaded: true,
+                archived: false
+            });
+        }
+    }
+    const worlds = [...mergedWorlds.values()];
+
+    const knownLoadStates = multiverseWorlds.filter(
+        world => world && typeof world.loaded === "boolean"
+            && world.archived !== true
+    );
+    const loadedCount = knownLoadStates.filter(world => world.loaded).length;
+    const unloadedCount = knownLoadStates.length - loadedCount;
+    const archivedCount = multiverseWorlds.filter(
+        world => world && world.archived === true
+    ).length;
+
+    if (elements.worldSummary) {
+        elements.worldSummary.textContent = knownLoadStates.length || archivedCount
+            ? `${loadedCount} loaded · ${unloadedCount} unloaded · ${archivedCount} archived`
+            : "World load status is unavailable.";
+    }
+
     setText(elements.worldCount, worlds.length);
-    setText(elements.worldsTag, `${worlds.length} worlds`);
+    const query = String(elements.worldSearch?.value || "").trim().toLowerCase();
+    const stateFilter = elements.worldStateFilter?.value || "all";
     updateGameruleWorldOptions(worldsData);
 
     if (!elements.worldsList) return;
@@ -572,10 +929,93 @@ function renderWorlds(worldsData, multiverseData) {
         return;
     }
 
-    for (const world of worlds) {
+    const filteredWorlds = worlds.filter(world => {
+        const multiverseInfo = multiverseByName.get(world.name);
+        const loaded = typeof multiverseInfo?.loaded === "boolean"
+            ? multiverseInfo.loaded
+            : null;
+        const archived = multiverseInfo?.archived === true;
+        const searchable = [world.name, world.environment, multiverseInfo?.alias]
+            .filter(value => typeof value === "string")
+            .join(" ")
+            .toLowerCase();
+
+        if (query && !searchable.includes(query)) return false;
+        if (stateFilter === "archived" && !archived) return false;
+        if (stateFilter !== "archived" && archived) return false;
+        if (stateFilter === "loaded" && loaded !== true) return false;
+        if (stateFilter === "unloaded" && loaded !== false) return false;
+        return true;
+    });
+
+    setText(
+        elements.worldsTag,
+        filteredWorlds.length === worlds.length
+            ? `${worlds.length} worlds`
+            : `${filteredWorlds.length} of ${worlds.length} worlds`
+    );
+
+    if (filteredWorlds.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.textContent = "No worlds match these filters.";
+        elements.worldsList.append(empty);
+        return;
+    }
+
+    for (const world of filteredWorlds) {
         elements.worldsList.append(
-            createWorldRow(world, multiverseByName.get(world.name))
+            createWorldRow(world, multiverseByName.get(world.name) || world)
         );
+    }
+}
+
+async function refreshWorldOverview() {
+    const button = elements.refreshWorldsButton;
+    if (button?.disabled) return;
+
+    if (button) {
+        button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+    }
+    setText(elements.worldsTag, "Refreshing");
+
+    try {
+        const worldsData = await apiGet("/worlds");
+        if (!Array.isArray(worldsData?.worlds)) {
+            throw new Error("Unexpected world-list response");
+        }
+
+        window.__dashboardWorldData = worldsData;
+
+        try {
+            const multiverseData = await apiGet("/worlds/multiverse");
+            if (!Array.isArray(multiverseData?.worlds)) {
+                throw new Error("Unexpected Multiverse response");
+            }
+            window.__dashboardMultiverseData = multiverseData;
+        } catch {
+            window.__dashboardMultiverseData = null;
+        }
+
+        renderWorlds(
+            window.__dashboardWorldData,
+            window.__dashboardMultiverseData
+        );
+    } catch (error) {
+        setText(elements.worldsTag, "Unavailable");
+        setText(elements.worldSummary, "World information is unavailable.");
+        if (elements.worldsList) {
+            const message = document.createElement("div");
+            message.className = "error-state";
+            message.textContent = `Could not refresh worlds: ${error.message}`;
+            elements.worldsList.replaceChildren(message);
+        }
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+        }
     }
 }
 
@@ -1525,6 +1965,22 @@ if (elements.whitelistForm) {
 if (elements.refreshPlayersButton) {
     elements.refreshPlayersButton.addEventListener("click", loadPlayerManagement);
 }
+
+function rerenderWorlds() {
+    if (window.__dashboardWorldData) {
+        renderWorlds(
+            window.__dashboardWorldData,
+            window.__dashboardMultiverseData || null
+        );
+    }
+}
+
+elements.worldSearch?.addEventListener("input", rerenderWorlds);
+elements.worldStateFilter?.addEventListener("change", rerenderWorlds);
+elements.refreshWorldsButton?.addEventListener("click", refreshWorldOverview);
+elements.worldCreateForm?.addEventListener("submit", createWorldFromForm);
+elements.worldImportForm?.addEventListener("submit", importWorldFromForm);
+elements.worldRegisterForm?.addEventListener("submit", registerExistingWorld);
 
 if (elements.loadGamerulesButton) {
     elements.loadGamerulesButton.addEventListener("click", () => loadWorldGamerules());
