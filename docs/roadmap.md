@@ -31,7 +31,8 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 
 ### 1. Verify world lifecycle in isolation
 
-- Build a test harness around temporary world folders and a controlled Paper/Multiverse test server or suitable test doubles.
+- [x] Add a GitHub-hosted integration workflow that builds the bridge, verifies official Paper and pinned Multiverse artifacts, and starts a disposable Paper 1.21.11 server with Multiverse 5.5.3.
+- [ ] Get a successful first integration run and fix any compatibility or lifecycle failures it finds.
 - Cover successful create, import/register, load/unload, archive, and restore flows.
 - Cover failures and rollback behavior, including filesystem and Multiverse state consistency.
 - Never use production worlds as fixtures. Define resource limits, cleanup, and a backup/rollback plan before using any real test server.

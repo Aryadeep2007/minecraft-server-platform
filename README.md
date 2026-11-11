@@ -121,7 +121,7 @@ The API's setup and required environment variables are documented in [management
 
 ## Tests and checks
 
-GitHub Actions compiles the FastAPI source, runs its unit tests and the dashboard's client-side tests, and packages the Paper bridge on pushes and pull requests targeting `main`. It does not test a live Minecraft server.
+GitHub Actions compiles the FastAPI source, runs its unit tests and the dashboard's client-side tests, packages the Paper bridge, and runs an isolated Paper/Multiverse lifecycle job on pushes and pull requests targeting `main`. The integration job uses disposable runner storage and does not access production.
 
 Run the API checks from `management-api/` with Python 3.12 or newer:
 

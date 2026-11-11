@@ -1,0 +1,104 @@
+name: Isolated Paper lifecycle integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  paper-lifecycle:
+    name: Paper and Multiverse lifecycle smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build bridge
+        working-directory: paper-management-bridge
+        run: mvn --batch-mode --no-transfer-progress clean package
+
+      - name: Download and verify Paper
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://fill.papermc.io/v3/projects/paper/versions/1.21.11/builds'
+          user_agent='MinecraftServerPlatform-CI (https://github.com/Aryadeep2007/minecraft-server-platform)'
+          curl --fail --silent --show-error -H "User-Agent: $user_agent" "$api" -o paper-builds.json
+          url=$(jq -r 'first(.[] | select(.channel == "STABLE") | .downloads."server:default".url) // empty' paper-builds.json)
+          sha=$(jq -r 'first(.[] | select(.channel == "STABLE") | .downloads."server:default".checksums.sha256) // empty' paper-builds.json)
+          test -n "$url" && test -n "$sha"
+          curl --fail --location --silent --show-error -H "User-Agent: $user_agent" "$url" -o paper.jar
+          echo "$sha  paper.jar" | sha256sum --check
+
+      - name: Download and verify Multiverse-Core
+        run: |
+          curl --fail --location --silent --show-error https://github.com/Multiverse/Multiverse-Core/releases/download/5.5.3/multiverse-core-5.5.3.jar -o multiverse-core.jar
+          echo '4528e3bb08b5ebf255ed9dd5698b286abf4b84f6c13c33b8bf753a40d9adcafb  multiverse-core.jar' | sha256sum --check
+
+      - name: Prepare disposable server
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci-paper/plugins
+          sudo mkdir -p /opt/minecraft-management/secrets
+          cp paper.jar .ci-paper/paper.jar
+          cp multiverse-core.jar .ci-paper/plugins/Multiverse-Core.jar
+          cp paper-management-bridge/target/paper-management-bridge-0.1.0-SNAPSHOT.jar .ci-paper/plugins/PaperManagementBridge.jar
+          token=$(openssl rand -hex 32)
+          printf '%s\n' "$token" | sudo tee /opt/minecraft-management/secrets/bridge-token >/dev/null
+          sudo chmod 600 /opt/minecraft-management/secrets/bridge-token
+          printf 'eula=true\n' > .ci-paper/eula.txt
+          cat > .ci-paper/server.properties <<'EOF'
+server-ip=127.0.0.1
+server-port=25565
+online-mode=false
+view-distance=3
+simulation-distance=3
+motd=Disposable CI test server
+EOF
+          echo "BRIDGE_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Start disposable Paper server
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd .ci-paper
+          nohup java -Xms512M -Xmx2G -jar paper.jar --nogui >server.log 2>&1 &
+          echo $! > server.pid
+          for attempt in $(seq 1 180); do
+            if grep -q 'Done (' server.log && curl --fail --silent -H "Authorization: Bearer $BRIDGE_TOKEN" http://127.0.0.1:25586/health >/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat server.pid)" 2>/dev/null; then cat server.log; exit 1; fi
+            sleep 2
+          done
+          cat server.log
+          echo 'Disposable Paper server did not become ready.'
+          exit 1
+
+      - name: Exercise world lifecycle against disposable Paper
+        run: python .github/scripts/paper_lifecycle_smoke.py
+
+      - name: Stop disposable Paper server
+        if: always()
+        run: |
+          if test -f .ci-paper/server.pid; then
+            kill "$(cat .ci-paper/server.pid)" 2>/dev/null || true
+          fi
+
+      - name: Show server log on failure
+        if: failure()
+        run: tail -n 250 .ci-paper/server.log
