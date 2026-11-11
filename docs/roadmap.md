@@ -25,6 +25,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 | Public repository foundation | Setup, security, backup/restore, troubleshooting, contributor guidance, changelog, and CI are published. The identified private IPv4 patterns were removed from reachable `main` history in an owner approved rewrite. |
 | Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for commit `6360b09`. |
 | Dashboard deployment | Deployed HTML/CSS now match the repository; JavaScript already matched. Live served-file hashes and active services were verified. Rollback copies are available. |
+| Isolated dashboard write path | Two ASGI tests send an authenticated same-origin create request through FastAPI to a mocked bridge and verify cross-origin rejection. No Paper world is created. API suite now has 25 tests. |
 
 ## Next milestones
 
@@ -43,6 +44,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 - Check that rejected, canceled, and failed operations display clear outcomes.
 - Verify at least one write action only against disposable test data after the isolated environment is ready.
 - Verify an interactive write in a disposable environment. The Computer Use runtime failed to initialize, but headless Edge confirmed live read-only rendering on 11 November.
+- ASGI integration tests now cover the authenticated API write path with a mocked bridge; they do not replace a real interactive browser check or Paper lifecycle test.
 
 **Complete when:** browser behavior, access control, and a disposable test mutation are verified end to end.
 

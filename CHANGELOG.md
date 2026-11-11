@@ -26,6 +26,7 @@ The changes below are included in the public `main` checkpoint dated 11 November
 - Tightened bridge archive/import/restore path checks to require a non-symlink world directory and regular `level.dat`; deployed after a fresh SSD backup and verified bridge/API/dashboard read-only endpoints after restart.
 - Deployed the repository-matching dashboard HTML and CSS to the active service after verifying zero players, service health, backup integrity, and rollback copies; live served-file hashes match the repository. The 22-test dashboard suite passes. Interactive browser login and production write actions remain unverified.
 - Verified the deployed dashboard and world-list page render in headless Edge over the private connection; no browser write action was submitted.
+- Added isolated ASGI tests for an authenticated same-origin dashboard create request and cross-origin rejection, using a mocked bridge so no Paper world is created.
 
 ### Changed
 

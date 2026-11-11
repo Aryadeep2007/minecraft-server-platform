@@ -11,7 +11,7 @@ A self-hosted Minecraft administration project built around Paper, a small Java 
 | PaperManagementBridge | Java 21 Maven plugin. Provides local HTTP health, world/Multiverse listing, gamerule, and confirmed world lifecycle operations. |
 | Web dashboard | Static HTML, CSS, and JavaScript. Includes server/player controls, gamerule editing, world overview, creation, ZIP import, load/unload, and reversible archive/restore flows. Requires the management API. |
 | FastAPI management API | Tracked under `management-api/`; provides authenticated server/player/settings/world routes. Uses external secret files and environment-specific settings. |
-| Automated tests | 23 Python API tests, 22 Node dashboard tests, and 8 Java bridge validation tests; Maven verifies the bridge build. Two Java symlink tests skip where Windows symlink creation is unavailable. Browser login, live world mutations, and clean-room deployment are not covered. |
+| Automated tests | 25 Python API tests, 22 Node dashboard tests, and 8 Java bridge validation tests; Maven verifies the bridge build. Symlink tests may skip where Windows symlink creation is unavailable. Browser login, live world mutations, and clean-room deployment are not covered. |
 | Deployment documentation | Historical notes are available under `docs/`; verify environment-specific steps before use. |
 
 ## Architecture

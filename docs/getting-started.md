@@ -33,7 +33,7 @@ py -3 -m venv .venv
 cd ..
 ```
 
-Expected: compilation succeeds and 23 API tests pass. On Windows, the symlink-registration test may skip if symlink creation is unavailable. The previously deployed 17-test subset passed on CT100/Linux; the six new middleware checks run locally and in CI.
+Expected: compilation succeeds and 25 API tests pass. On Windows, the symlink-registration test may skip if symlink creation is unavailable. The previously deployed 17-test subset passed on CT100/Linux; the middleware and ASGI mock-bridge checks run locally and in CI.
 
 ```powershell
 cd web-dashboard
