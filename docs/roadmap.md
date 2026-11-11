@@ -25,7 +25,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 | Public repository foundation | Setup, security, backup/restore, troubleshooting, contributor guidance, changelog, and CI are published. The identified private IPv4 patterns were removed from reachable `main` history in an owner approved rewrite. |
 | Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for commit `6360b09`. |
 | Dashboard deployment | Deployed HTML/CSS now match the repository; JavaScript already matched. Live served-file hashes and active services were verified. Rollback copies are available. |
-| Isolated dashboard write path | Two ASGI tests send an authenticated same-origin create request through FastAPI to a mocked bridge and verify cross-origin rejection. No Paper world is created. API suite now has 25 tests. |
+| Isolated dashboard write path | ASGI tests send authenticated same-origin create/load/unload/archive/restore requests through FastAPI to a mocked bridge and verify cross-origin rejection. No Paper world is created. API suite now has 26 tests. |
 
 ## Next milestones
 

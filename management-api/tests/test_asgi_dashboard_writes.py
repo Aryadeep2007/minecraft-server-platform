@@ -105,6 +105,30 @@ class DashboardWriteAsgiTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Cross-origin", response["detail"])
         mock_bridge.assert_not_awaited()
 
+    async def test_authenticated_lifecycle_actions_reach_only_mock_bridge(self):
+        actions = (
+            ("/worlds/load", "load_world", {"world": "DisposableWorld", "loaded": True}),
+            ("/worlds/unload", "unload_world", {"world": "DisposableWorld", "loaded": False}),
+            ("/worlds/archive", "archive_world", {"world": "DisposableWorld", "archived": True}),
+            ("/worlds/restore", "restore_world", {"world": "DisposableWorld", "archived": False}),
+        )
+        payload = {"name": "DisposableWorld", "confirmed_name": "DisposableWorld"}
+
+        for path, bridge_method, result in actions:
+            with self.subTest(path=path):
+                with patch(
+                    f"app.main.{bridge_method}",
+                    new_callable=AsyncMock,
+                    return_value=result,
+                ) as mock_bridge:
+                    status, response = await self.request(
+                        "POST", path, payload, "http://testserver"
+                    )
+
+                self.assertEqual(status, 200)
+                self.assertEqual(response, result)
+                mock_bridge.assert_awaited_once_with("DisposableWorld")
+
 
 if __name__ == "__main__":
     unittest.main()

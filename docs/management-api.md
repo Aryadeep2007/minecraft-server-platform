@@ -84,7 +84,7 @@ Run dashboard tests from `web-dashboard/` with Node.js 22:
 node --test tests/*.test.cjs
 ```
 
-Current local verification: 25 API tests (one Windows symlink limitation skip), 22 dashboard tests, and 8 Java bridge validation tests pass; Maven `clean verify` succeeds. Two Java symlink tests may skip on Windows. The two added ASGI-level tests exercise an authenticated same-origin create request and reject a cross-origin request while mocking the bridge; they do not create a Paper world. The earlier 17-test API suite also passed on CT100's Linux runtime, including its symlink check. A live request to load a confirmed, uppercase, unregistered probe name was rejected with HTTP 404 before any world action. This does not prove successful world mutations on Paper. On 10 November 2026, API health, bridge health, world list, Multiverse list, and dashboard requests returned HTTP 200 after deployment.
+Current local verification: 26 API tests (one Windows symlink limitation skip), 22 dashboard tests, and 8 Java bridge validation tests pass; Maven `clean verify` succeeds. Two Java symlink tests may skip on Windows. ASGI-level tests exercise authenticated same-origin create/load/unload/archive/restore requests and reject a cross-origin request while mocking the bridge; they do not create a Paper world. The earlier 17-test API suite also passed on CT100's Linux runtime, including its symlink check. A live request to load a confirmed, uppercase, unregistered probe name was rejected with HTTP 404 before any world action. This does not prove successful world mutations on Paper. On 10 November 2026, API health, bridge health, world list, Multiverse list, and dashboard requests returned HTTP 200 after deployment.
 
 ## Deployment status and limitations
 
