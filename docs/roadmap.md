@@ -12,7 +12,7 @@ This page is the public summary of project progress and planned milestones. It e
 
 The repository contains a Paper management bridge, a FastAPI management API, a static web dashboard, automated component tests, CI, and setup/security/operations documentation. World management includes create, import/register, load/unload, and reversible archive/restore flows. Permanent deletion is intentionally unavailable.
 
-The dashboard's three served assets now match the repository. The HTML and CSS were updated on the deployed host after checking service status, zero players, available memory, and a verified backup; timestamped rollback copies were retained. No service restart was needed. The 22 dashboard unit tests pass, and headless Edge loaded the live dashboard and world-list page over the private connection. An authenticated interactive write in a disposable environment remains unverified. World mutations are not proven safe against a running Paper server. The production host must not be treated as an integration test environment without a fresh resource review, recoverable backup, and explicit test plan.
+The dashboard's three served assets match the repository. The 22 dashboard unit tests pass. A private Chrome session loaded live API, Paper, world, and player status without a write. Chromium CI also completed an authenticated dashboard create/list/unload/archive flow against disposable Paper; its allowlisted identity was synthetic, so Tailscale login renewal/expiry remains untested. No world lifecycle write has been submitted to the production server. The latest SSD backup was restored to a temporary stopped, disconnected CT, inspected read-only, and the temporary CT removed; the source backup and running CT100 were preserved. A full clean installation and off-host backup recovery remain unverified.
 
 ## Completed checkpoints
 
@@ -97,7 +97,7 @@ The dashboard's three served assets now match the repository. The HTML and CSS w
 
 ### 8. Maintain the CI toolchain
 
-- Review the GitHub Actions warnings from run `42980370443` about the runner image migration and JavaScript action runtime deprecation.
+- Review the GitHub Actions warnings from run `42990560854` about the runner image migration and JavaScript action runtime deprecation.
 - Update pinned action versions when compatible releases are available, then confirm all CI jobs pass.
 
 **Complete when:** the workflow uses supported action runtimes and runner images without deprecation warnings.
