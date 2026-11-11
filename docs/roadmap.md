@@ -2,9 +2,9 @@
 
 **Last updated:** 11 November 2026
 
-**Current checkpoint:** [`3a375f9`](https://github.com/Aryadeep2007/minecraft-server-platform/commit/3a375f9879e1d75fcc2f8c8b9e86a780d75eb9f7) on `main`
+**Published branch:** [`main`](https://github.com/Aryadeep2007/minecraft-server-platform/tree/main)
 
-**CI:** [GitHub Actions run 42962762103 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42962762103)
+**Latest verified checkpoint:** [`6360b09`](https://github.com/Aryadeep2007/minecraft-server-platform/commit/6360b09e7a67dfe801774642fab6c4de016737a6); [CI run 42964449233 passed](https://github.com/Aryadeep2007/minecraft-server-platform/actions/runs/42964449233)
 
 This page is the public summary of project progress and planned milestones. It excludes private deployment identifiers, access details, credentials, and player data. The separate [project handover](PROJECT_HANDOVER.md) contains dated technical context; verify dated infrastructure observations before relying on them.
 
@@ -23,7 +23,7 @@ The deployed services have passed read only health and world list checks. Automa
 | Component verification | 23 API tests, 22 dashboard tests, and 8 bridge tests passed in the published checkpoint; Windows may skip three symlink cases where symlink creation is unavailable. |
 | Deployment safety | The latest recorded deployment used a verified backup and rollback copy, followed by read only health checks. No production world lifecycle mutation is recorded. These observations are dated; check live status before operational work. |
 | Public repository foundation | Setup, security, backup/restore, troubleshooting, contributor guidance, changelog, and CI are published. The identified private IPv4 patterns were removed from reachable `main` history in an owner approved rewrite. |
-| Publication checkpoint | Commit `3a375f9` is on `main`; its GitHub Actions CI run passed. |
+| Publication checkpoint | Project status and milestone roadmap are published on `main`; GitHub Actions CI passed for commit `6360b09`. |
 
 ## Next milestones
 
@@ -84,6 +84,13 @@ The deployed services have passed read only health and world list checks. Automa
 - Review the repository description, topics, homepage, and social preview before changing GitHub settings.
 
 **Complete when:** ownership terms and presentation choices are decided and all public claims match verified behavior.
+
+### 8. Maintain the CI toolchain
+
+- Review the GitHub Actions warnings from run `42964449233` about the runner image migration and JavaScript action runtime deprecation.
+- Update pinned action versions when compatible releases are available, then confirm all CI jobs pass.
+
+**Complete when:** the workflow uses supported action runtimes and runner images without deprecation warnings.
 
 ## Out of scope until separately planned
 

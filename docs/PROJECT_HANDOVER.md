@@ -3,7 +3,7 @@
 
 ## Current public checkpoint — 11 November 2026
 
-The current repository checkpoint is commit `3a375f9879e1d75fcc2f8c8b9e86a780d75eb9f7` on `main`. The worktree was clean after publication, the history rewrite was approved by the owner, and GitHub Actions CI passed for this commit. See the [public project roadmap](roadmap.md) for completed checkpoints and remaining milestones.
+The current repository branch is `main`; the project status and milestones are published in the [public project roadmap](roadmap.md). The history rewrite was approved by the owner, the worktree was clean after publication, and GitHub Actions CI passed for the published documentation checkpoint. See the roadmap for the latest checkpoint and CI run.
 
 The repository includes the sanitized management API, Paper bridge, dashboard, documentation, and automated checks. The deployed platform's health and world lists were checked read only; no world lifecycle mutation has been verified against a safe test server. Isolated lifecycle testing, authenticated browser workflow validation, and a clean room install remain open. No private hostnames, addresses, credentials, or player identifiers belong in this handover.
 
